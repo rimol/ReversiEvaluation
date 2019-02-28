@@ -1,3 +1,5 @@
+#include <iostream>
+
 typedef unsigned long long Bitboard;
 
 // CPU命令は使わずに実装する.
@@ -171,3 +173,7 @@ inline Bitboard getFlip(Bitboard p, Bitboard o, Bitboard sqbit) {
 
     return flip;
 }
+
+// cout でビットボードを見やすく出力する用
+// ostream: coutとか.
+std::ostream& operator << (std::ostream& os, const Bitboard x);
