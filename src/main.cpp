@@ -1,10 +1,14 @@
 #include <iostream>
-using namespace std;
+#include <string>
+#include "recgen.h"
  
 int main() {
-	for( int i=0; i<10; ++i ) {
-		cout << i << ' ';
-	}
-	cout << endl;
+	std::string folderPath;
+	std::cout << "Enter a folder path:";
+	std::cin >> folderPath;
+
+	generateRecode(100, folderPath);
+
+	std::cout << std::endl << "completed!" << std::endl;
 	return 0;
 }
