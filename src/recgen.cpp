@@ -40,6 +40,9 @@ void generateRecode(int n, std::string folderPath) {
             Bitboard p = current.bits[c];
             Bitboard o = current.bits[c ^ 1];
 
+            printBitboard(p);
+            printBitboard(o);
+
             Bitboard moves = getMoves(p, o);
             if (moves == 0ULL) {
                 if (passed) {

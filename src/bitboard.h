@@ -178,4 +178,7 @@ inline Bitboard getFlip(Bitboard p, Bitboard o, Bitboard sqbit) {
 
 // cout でビットボードを見やすく出力する用
 // ostream: coutとか.
-std::ostream& operator << (std::ostream& os, const Bitboard x);
+// std::ostream& operator << (std::ostream& os, const Bitboard x);
+// ↑typedefでunsigned long long の名前を Bitboard に変えているだけなので, もとのオーバーロードと判断がつかないため使えない
+
+void printBitboard(const Bitboard x);

@@ -7,7 +7,7 @@ int main() {
 	std::cout << "Enter a folder path:";
 	std::cin >> folderPath;
 
-	generateRecode(10000, folderPath);
+	generateRecode(1, folderPath);
 
 	std::cout << std::endl << "completed!" << std::endl << "Press any key to finish this program:";
 	
