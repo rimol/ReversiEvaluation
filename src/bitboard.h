@@ -54,9 +54,8 @@ inline Bitboard getMoves(Bitboard p, Bitboard o) {
     mo &= mo >> 2;
     t |= t >> 4 & mo;
     moves |= (t ^ p) >> 1 & blank;
-    // 上下
-    mo = o & 0x00ffffffffffff00ULL;
     // 下
+    mo = o & 0x00ffffffffffff00ULL;
     t = p;
     t |= t << 8 & mo;
     mo &= mo << 8;
@@ -65,6 +64,7 @@ inline Bitboard getMoves(Bitboard p, Bitboard o) {
     t |= t << 32 & mo;
     moves |= (t ^ p) << 8 & blank;
     // 上
+    mo = o & 0x00ffffffffffff00ULL;
     t = p;
     t |= t >> 8 & mo;
     mo &= mo >> 8;
@@ -72,9 +72,8 @@ inline Bitboard getMoves(Bitboard p, Bitboard o) {
     mo &= mo >> 16;
     t |= t >> 32 & mo;
     moves |= (t ^ p) >> 8 & blank;
-    // 斜め
-    mo = o & 0x007e7e7e7e7e7e00ULL;
     // 右下
+    mo = o & 0x007e7e7e7e7e7e00ULL;
     t = p;
     t |= t << 9 & mo;
     mo &= mo << 9;
@@ -83,6 +82,7 @@ inline Bitboard getMoves(Bitboard p, Bitboard o) {
     t |= t << 36 & mo;
     moves |= (t ^ p) << 9 & blank;
     // 左上
+    mo = o & 0x007e7e7e7e7e7e00ULL;
     t = p;
     t |= t >> 9 & mo;
     mo &= mo >> 9;
@@ -91,6 +91,7 @@ inline Bitboard getMoves(Bitboard p, Bitboard o) {
     t |= t >> 36 & mo;
     moves |= (t ^ p) >> 9 & blank;
     // 左下
+    mo = o & 0x007e7e7e7e7e7e00ULL;
     t = p;
     t |= t << 7 & mo;
     mo &= mo << 7;
@@ -99,6 +100,7 @@ inline Bitboard getMoves(Bitboard p, Bitboard o) {
     t |= t << 28 & mo;
     moves |= (t ^ p) << 7 & blank;
     // 右上
+    mo = o & 0x007e7e7e7e7e7e00ULL;
     t = p;
     t |= t >> 7 & mo;
     mo &= mo >> 7;
@@ -119,20 +121,20 @@ inline Bitboard getFlip(Bitboard p, Bitboard o, Bitboard sqbit) {
 
     // 左
     Bitboard d = 0x00000000000000feULL * sqbit;
-    Bitboard t = (mo | ~d) + 1 & d & p;
+    Bitboard t = (mo | ~d) + 1ULL & d & p;
     flip = t - ((t | -t) >> 63) & d;
     // 左上
     d = 0x8040201008040200ULL * sqbit;
-    t = (mo | ~d) + 1 & d & p;
-    flip = t - ((t | -t) >> 63) & d;
+    t = (mo | ~d) + 1ULL & d & p;
+    flip |= t - ((t | -t) >> 63) & d;
     // 上 マスクは付けてはだめ。
     d = 0x1010101001010100ULL * sqbit;
-    t = (o | ~d) + 1 & d & p;
-    flip = t - ((t | -t) >> 63) & d;
+    t = (o | ~d) + 1ULL & d & p;
+    flip |= t - ((t | -t) >> 63) & d;
     // 右上
     d = 0x0002040810204080ULL * sqbit;
-    t = (mo | ~d) + 1 & d & p;
-    flip = t - ((t | -t) >> 63) & d;
+    t = (mo | ~d) + 1ULL & d & p;
+    flip |= t - ((t | -t) >> 63) & d;
     // 右
     t = sqbit;
     t |= t >> 1 & mo;

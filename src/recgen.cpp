@@ -25,7 +25,9 @@ void generateRecode(int n, std::string folderPath) {
     std::random_device rnd; // 非決定的乱数生成器、これでメルセンヌ・ツイスタのシードを設定
     std::mt19937 mt(rnd());
 
-    std::vector<Board> boards(60);
+    std::vector<Board> boards(60 + 1); // 初期盤面 + 60手分
+
+    // n回ループ
     for (int i = 0; i < n; ++i) {
         bool passed = false;
         int result = 0;
@@ -34,17 +36,18 @@ void generateRecode(int n, std::string folderPath) {
         // 初期
         boards[0] = Board(Black, 0x0000000810000000ULL, 0x0000001008000000ULL);
         
-        for (int j = 1; j < 60; ++j) {
+        for (int j = 1; j <= 60; ++j) {
             Board current = boards[j - 1];
-            int c = (int)current.c;
+            Color c = current.c;
             Bitboard p = current.bits[c];
-            Bitboard o = current.bits[c ^ 1];
+            Bitboard o = current.bits[~c];
 
-            printBitboard(p);
-            printBitboard(o);
+            printBoard(current); // 0-59までの盤面を表示できたら正解
 
             Bitboard moves = getMoves(p, o);
+            // 打つ手がない！
             if (moves == 0ULL) {
+                // ２回連続パス=終局
                 if (passed) {
                     result = popcount(current.bits[Black]) - popcount(current.bits[White]);
                     turns = j;
@@ -52,7 +55,7 @@ void generateRecode(int n, std::string folderPath) {
                 }
                 else {
                     passed = true;
-                    boards[--j] = Board((Color)(c ^ 1), o, p);
+                    boards[--j] = c == Black ? Board(~c, p, o) : Board(~c, o, p);
                     continue;
                 }
             }
@@ -68,12 +71,16 @@ void generateRecode(int n, std::string folderPath) {
                 p ^= flip | sqbit;
                 o ^= flip;
 
-                boards[j] = Board((Color)(c ^ 1), o, p);
+                boards[j] = c == Black ? Board(~c, p, o) : Board(~c, o, p);
+
+                passed = false;
             }
         }
 
+        std::cout << turns << std::endl; // これ意味ある？（草）
+
         if (turns == 60) {
-            result = popcount(boards[59].bits[Black]) - popcount(boards[59].bits[White]);
+            result = popcount(boards[60].bits[Black]) - popcount(boards[60].bits[White]);
         }
 
         // さっき作ったフォルダ内に保存していく
