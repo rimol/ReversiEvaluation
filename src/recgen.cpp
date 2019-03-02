@@ -31,7 +31,7 @@ void generateRecode(int n, std::string folderPath) {
     for (int i = 0; i < n; ++i) {
         bool passed = false;
         int result = 0;
-        // 終局までの手数
+        // 終局までの手数(最初から4つマスが埋まっているので、最大60)
         int turns = 60;
         // 初期
         boards[0] = Board(Black, 0x0000000810000000ULL, 0x0000001008000000ULL);
@@ -42,15 +42,15 @@ void generateRecode(int n, std::string folderPath) {
             Bitboard p = current.bits[c];
             Bitboard o = current.bits[~c];
 
-            printBoard(current); // 0-59までの盤面を表示できたら正解
+            // printBoard(current); // 0-59までの盤面を表示できたら正解
 
             Bitboard moves = getMoves(p, o);
             // 打つ手がない！
             if (moves == 0ULL) {
                 // ２回連続パス=終局
                 if (passed) {
-                    result = popcount(current.bits[Black]) - popcount(current.bits[White]);
-                    turns = j;
+                    // j手目が打てないので、j-1手で終局
+                    turns = j - 1;
                     break;
                 }
                 else {
@@ -77,14 +77,12 @@ void generateRecode(int n, std::string folderPath) {
             }
         }
 
-        std::cout << turns << std::endl; // これ意味ある？（草）
-
-        if (turns == 60) {
-            result = popcount(boards[60].bits[Black]) - popcount(boards[60].bits[White]);
-        }
+        // std::cout << turns << std::endl; // これ意味ある？（草）
+        result = popcount(boards[turns].bits[Black]) - popcount(boards[turns].bits[White]);
 
         // さっき作ったフォルダ内に保存していく
-        for (int j = 0; j < turns; ++j) {
+        // 初期盤面(0手目終了時)は入れない。
+        for (int j = 1; j <= turns; ++j) {
             Recode recode(boards[j], j, result);
             ofs.write(reinterpret_cast<char*>(&recode), sizeof(Recode));
         }
