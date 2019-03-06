@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <stdint.h>
 
 typedef unsigned long long Bitboard;
 
@@ -23,10 +24,11 @@ typedef unsigned long long Bitboard;
 
 // 立っているビットの数を数える
 inline Bitboard popcount(Bitboard x) {
-    x -= (x >> 1) & 0x5555555555555555ULL;
-    x = (x & 0x3333333333333333ULL) + ((x >> 2) & 0x3333333333333333ULL);
-    x = (x & 0x0f0f0f0f0f0f0f0fULL) + ((x >> 4) & 0x0f0f0f0f0f0f0f0fULL);
-    return x * 0x0101010101010101ULL >> 56;
+    // x -= (x >> 1) & 0x5555555555555555ULL;
+    // x = (x & 0x3333333333333333ULL) + ((x >> 2) & 0x3333333333333333ULL);
+    // x = (x & 0x0f0f0f0f0f0f0f0fULL) + ((x >> 4) & 0x0f0f0f0f0f0f0f0fULL);
+    // return x * 0x0101010101010101ULL >> 56;
+    return __builtin_popcountll(x);
 }
 
 // 一番下のビットが下から数えて何ビット目にあるか求める(0-indexed)
