@@ -1,9 +1,9 @@
 #include <iostream>
 #include <string>
-#include "test.h"
+#include "solver.h"
  
 int main() {
-	testBitboardOperation();
+	ffotest();
 
 	std::cout << std::endl << "completed!" << std::endl << "Press any key to finish this program:";
 	

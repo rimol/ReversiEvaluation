@@ -28,7 +28,7 @@ static int negamax(Bitboard p, Bitboard o, int min, int max, bool passed) {
         // 敵からみた石差が返ってくるため, 符号を反転させる
         int score = -negamax(o ^ flip, p ^ flip ^ sqbit, -max, -std::max(bestScore, min), false); // 下限がbestScore or minになる（大きい方）. 相手から見たときの符号反転注意
         // 枝刈りできます(少なくともbestScoreがmax以上になるので)
-        if (score >= max) return bestScore;
+        if (score >= max) return score;
         bestScore = std::max(score, bestScore);
         moves ^= sqbit;
     }
