@@ -1,13 +1,15 @@
 #include <algorithm>
+#include <string>
 #include <vector>
 #include "bitboard.h"
+#include "board.h"
 #include "solver.h"
 
 // negamaxかいて. <- 要はpからみた石差の最大値を返す
 // min < v < max
 static int negamax(Bitboard p, Bitboard o, int min, int max, bool passed) {
     // 全部埋まってるとき
-    if (p | o == 0xffffffffffffffffULL) return popcount(p) - popcount(o);
+    // if ((p | o) == 0xffffffffffffffffULL) return popcount(p) - popcount(o);
 
     Bitboard moves = getMoves(p, o);
 
@@ -128,5 +130,34 @@ static int negascout(Bitboard p, Bitboard o, int min, int max, bool passed) {
 }
 
 int solve(Bitboard p, Bitboard o) {
+    return negascout(p, o, -64, 64, false);
+}
 
+struct FFO {
+    Color c;
+    Bitboard bits[2];
+
+    // X: 黒, O: 白, -: 空白マス
+    FFO(std::string boardText, Color _c) : c(_c), bits({0ULL, 0ULL}) {
+        Bitboard bit = 1ULL;
+        for (char c : boardText) {
+            if (c == 'X') bits[Black] |= bit;
+            else if (c == 'O') bits[White] |= bit;
+
+            bit <<= 1;
+        }
+    }
+};
+
+void ffotest() {
+    const FFO boards[] = {
+        { "O--OOOOX-OOOOOOXOOXXOOOXOOXOOOXXOOOOOOXX---OOOOX----O--X--------", Black },
+        { "-OOOOO----OOOOX--OOOOOO-XXXXXOO--XXOOX--OOXOXX----OXXO---OOO--O-", Black },
+    };
+
+    for (FFO ffo : boards) {
+        Board b(ffo.c, ffo.bits[Black], ffo.bits[White]);
+        printBoard(b);
+        std::cout << solve(ffo.bits[ffo.c], ffo.bits[~ffo.c]) << std::endl;
+    }
 }

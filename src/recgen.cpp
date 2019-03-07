@@ -63,7 +63,7 @@ void generateRecode(int n, std::string folderPath) {
                 // 打つ手をランダムに決める
                 int chosen = mt() % (popcount(moves));
                 // 下からビットを剥がしていく
-                while (chosen--) moves &= moves - 1;
+                while (chosen--) moves &= moves - 1ULL;
                 // 一番下以外のビットを消す
                 Bitboard sqbit = -moves & moves;
                 Bitboard flip = getFlip(p, o, sqbit);

@@ -130,7 +130,7 @@ inline Bitboard getFlip(Bitboard p, Bitboard o, Bitboard sqbit) {
     t = (mo | ~d) + 1ULL & d & p;
     flip |= t - ((t | -t) >> 63) & d;
     // 上 マスクは付けてはだめ。
-    d = 0x1010101001010100ULL * sqbit;
+    d = 0x0101010101010100ULL * sqbit;
     t = (o | ~d) + 1ULL & d & p;
     flip |= t - ((t | -t) >> 63) & d;
     // 右上
@@ -179,6 +179,12 @@ inline Bitboard getFlip(Bitboard p, Bitboard o, Bitboard sqbit) {
 
     return flip;
 }
+
+// 愚直実装ばーじょん
+// バグつぶし用
+
+Bitboard getMoves_slow(Bitboard p, Bitboard o);
+Bitboard getFlip_slow(Bitboard p, Bitboard o, Bitboard sqbit);
 
 // cout でビットボードを見やすく出力する用
 // ostream: coutとか.

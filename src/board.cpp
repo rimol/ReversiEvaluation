@@ -6,10 +6,10 @@ void printBoard(const Board b) {
     for (int i = 63; i >= 0; --i) {
         Bitboard bit = 1ULL << i;
         if (b.bits[Black] & bit) {
-            std::cout << "o";
+            std::cout << "X";
         }
         else if (b.bits[White] & bit) {
-            std::cout << "x";
+            std::cout << "O";
         }
         else {
             std::cout << "-";
