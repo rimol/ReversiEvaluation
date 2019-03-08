@@ -11,7 +11,7 @@
 #include "recode.h"
 #include "solver.h"
 
-void generateRecode(int n, std::string folderPath) {
+void generateRecode(int n, int depth, std::string folderPath) {
     // 指定されたフォルダに保存用フォルダを作成
     // フォルダ名は現在時刻
     std::stringstream ss;
@@ -67,7 +67,7 @@ void generateRecode(int n, std::string folderPath) {
                 }
             }
             else {
-                if (j <= 50) {
+                if (j <= 60 - depth) {
                     // 打つ手をランダムに決める
                     int chosen = mt() % (popcount(moves));
                     // 下からビットを剥がしていく
