@@ -33,7 +33,8 @@ inline Bitboard popcount(Bitboard x) {
 
 // 一番下のビットが下から数えて何ビット目にあるか求める(0-indexed)
 inline Bitboard tzcnt(Bitboard x) {
-    return popcount(~x & x - 1ULL);
+    // return popcount(~x & x - 1ULL);
+    return __builtin_ctzll(x);
 }
 
 // 打てるマスのビットを立てる
