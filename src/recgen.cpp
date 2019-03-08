@@ -1,4 +1,4 @@
-// #include <direct.h>
+#include <direct.h>
 #include <fstream>
 #include <random>
 #include <sstream>
@@ -12,15 +12,22 @@
 #include "solver.h"
 
 void generateRecode(int n, std::string folderPath) {
-    // 指定されたフォルダに保存用ファイルを作成
-    // ファイル名は現在時刻
+    // 指定されたフォルダに保存用フォルダを作成
+    // フォルダ名は現在時刻
     std::stringstream ss;
     ss << folderPath;
     if (folderPath.back() != '\\') ss << '\\';
-    ss << time(NULL) << ".bin";
+    ss << time(NULL);// << ".bin";
 
-    // ファイルを作成し、バイナリモードで開く
-    std::ofstream ofs(ss.str(), std::ios::binary);
+    // フォルダ作成
+    mkdir(ss.str().c_str());
+
+    std::ofstream ofss[60];
+    for (int i = 0; i < 60; ++i) {
+        std::stringstream _ss;
+        _ss << ss.str() << "\\" << (i + 1) << ".bin";
+        ofss[i] = std::ofstream(_ss.str(), std::ios::binary);
+    }
 
     std::random_device rnd; // 非決定的乱数生成器、これでメルセンヌ・ツイスタのシードを設定
     std::mt19937 mt(rnd());
@@ -108,7 +115,7 @@ void generateRecode(int n, std::string folderPath) {
         // 初期盤面(0手目終了時)は入れない。
         for (int j = 1; j <= turns; ++j) {
             Recode recode(boards[j], j, result);
-            ofs.write(reinterpret_cast<char*>(&recode), sizeof(Recode));
+            ofss[j - 1].write(reinterpret_cast<char*>(&recode), sizeof(Recode));
         }
     }
 }
