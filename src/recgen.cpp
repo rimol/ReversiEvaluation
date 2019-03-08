@@ -60,19 +60,43 @@ void generateRecode(int n, std::string folderPath) {
                 }
             }
             else {
-                // 打つ手をランダムに決める
-                int chosen = mt() % (popcount(moves));
-                // 下からビットを剥がしていく
-                while (chosen--) moves &= moves - 1ULL;
-                // 一番下以外のビットを消す
-                Bitboard sqbit = -moves & moves;
-                Bitboard flip = getFlip(p, o, sqbit);
+                if (j <= 50) {
+                    // 打つ手をランダムに決める
+                    int chosen = mt() % (popcount(moves));
+                    // 下からビットを剥がしていく
+                    while (chosen--) moves &= moves - 1ULL;
+                    // 一番下以外のビットを消す
+                    Bitboard sqbit = -moves & moves;
+                    Bitboard flip = getFlip(p, o, sqbit);
 
-                p ^= flip | sqbit;
-                o ^= flip;
+                    p ^= flip | sqbit;
+                    o ^= flip;
+                }
+                // 残り10マスからソルバーを使います
+                else {
+                    int minscore = 64;
+                    Bitboard bestMove = 0ULL; // 適当
+                    Bitboard bestFlip = 0ULL; // 適当
+                    // 1手すすめて、相手から見たスコアを計算、それが最小になるように取る
+                    while (moves) {
+                        Bitboard sqbit = moves & -moves;
+                        Bitboard flip = getFlip(p, o, sqbit);
+
+                        int score = solve(o ^ flip, p ^ flip ^ sqbit);
+                        if (score < minscore) {
+                            minscore = score;
+                            bestMove = sqbit;
+                            bestFlip = flip;
+                        }
+
+                        moves ^= sqbit;
+                    }
+
+                    p ^= bestFlip | bestMove;
+                    o ^= bestFlip;
+                }
 
                 boards[j] = c == Black ? Board(~c, p, o) : Board(~c, o, p);
-
                 passed = false;
             }
         }
