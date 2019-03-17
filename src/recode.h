@@ -9,6 +9,8 @@ struct Recode {
     // 最終石差(黒-白)
     int result;
 
+    Recode() {}
+
     Recode(Board b, int _turn, int _result)
         : bits({b.bits[Black], b.bits[White]})
         , turn(_turn), result(_result) {}

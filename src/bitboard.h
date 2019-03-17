@@ -37,6 +37,62 @@ inline Bitboard tzcnt(Bitboard x) {
     return __builtin_ctzll(x);
 }
 
+// コピペ
+inline Bitboard delta_swap(Bitboard x, Bitboard mask, int delta) {
+    // ペアのxor
+    Bitboard t = (x ^ (x >> delta)) & mask;
+    // これを使えば簡単にswapできる
+    return t ^ (t << delta) ^ x;
+}
+
+// ビットボードを右に90°回転させる.
+// 対角線A8H1を軸に盤面を反転させて、1, 2, 3, ..., 8列を反転させて8, 7, 6, ..., 1列にすればよい
+inline Bitboard rotateRightBy90(Bitboard x) {
+    /*
+    0x000000000f0f0f0f = 
+    0000 0000
+    0000 0000
+    0000 0000
+    0000 0000
+
+    0000 1111
+    0000 1111
+    0000 1111
+    0000 1111
+    */
+    x = delta_swap(x, 0x000000000f0f0f0fULL, 36);
+    /*
+    0x0000333300003333 = 
+    0000 0000
+    0000 0000
+    0011 0011
+    0011 0011
+
+    0000 0000
+    0000 0000
+    0011 0011
+    0011 0011
+    */
+    x = delta_swap(x, 0x0000333300003333ULL, 18);
+    /*
+    0x0055005500550055 = 
+    0000 0000
+    0101 0101
+    0000 0000
+    0101 0101
+
+    0000 0000
+    0101 0101
+    0000 0000
+    0101 0101
+    */
+   x = delta_swap(x, 0x0055005500550055ULL, 9);
+   // 横列反転
+   x = x >> 32 | x << 32;
+   x = (x >> 16 & 0x0000ffff0000ffffULL) | (x & 0x0000ffff0000ffffULL) << 16;
+   return (x >> 8 & 0x00ff00ff00ff00ffULL) | (x & 0x00ff00ff00ff00ffULL) << 8;
+}
+
 // 打てるマスのビットを立てる
 inline Bitboard getMoves(Bitboard p, Bitboard o) {
     Bitboard moves = 0ULL;
