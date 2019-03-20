@@ -1,9 +1,10 @@
 #pragma once
-#include "board.h"
+#include "bitboard.h"
 // Boardとややこしいが、これでファイルのやりとりをする
 struct Recode {
     // 盤面
-    Bitboard bits[2];
+    Bitboard p;
+    Bitboard o;
     // 何手目の盤面か
     int turn;
     // 最終石差(黒-白)
@@ -11,7 +12,6 @@ struct Recode {
 
     Recode() {}
 
-    Recode(Board b, int _turn, int _result)
-        : bits({b.bits[Black], b.bits[White]})
-        , turn(_turn), result(_result) {}
+    Recode(Bitboard _p, Bitboard _o, int _turn)
+        : p(_p), o(_o), turn(_turn), result() {}
 };
