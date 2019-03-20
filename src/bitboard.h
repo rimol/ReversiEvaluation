@@ -237,6 +237,10 @@ inline Bitboard getFlip(Bitboard p, Bitboard o, Bitboard sqbit) {
     return flip;
 }
 
+inline int getMobility(Bitboard p, Bitboard o) {
+    return popcount(getMoves(p, o));
+}
+
 // 愚直実装ばーじょん
 // バグつぶし用
 
