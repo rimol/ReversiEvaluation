@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <vector>
 #include <fstream>
 #include "bitboard.h"
@@ -136,21 +137,33 @@ static int verDiff[8][6561];
 static int corDiff[4][6561];
 static int mobDiff = 0;
 
+// 評価値は最終石差*1000の近似とする
 void generateEvaluationData(std::string recodeFilePath) {
     // 更新の繰り返し回数
-    constexpr int M = 10000;
-    for (int k = 0; k < M; ++k) {
-        // ファイルに入っている局面の数
-        int N = 0;
-        // ファイルを開く
-        std::ifstream ifs(recodeFilePath, std::ios::in | std::ios::binary);
-        while (!ifs.eof()) {
-            ++N;
-            Recode recode;
-            ifs.read((char*)&recode, sizeof(Recode));
+    constexpr int N = 10000;
+    // 配列の初期化（0埋め）
+    // diffの方は0毎回0になるはずですが一応
+    std::fill(horizontal, horizontal + 8 * 6561, 0);
+    std::fill(vertical, vertical + 8 * 6561, 0);
+    std::fill(corner, corner + 4 * 6561, 0);
+    mobility = 0;
+    std::fill(horDiff, horDiff + 8 * 6561, 0);
+    std::fill(verDiff, verDiff + 8 * 6561, 0);
+    std::fill(corDiff, corDiff + 4 * 6561, 0);
+    mobDiff = 0;
+    // ファイルを何回も読むのは無駄なので最初に全部読み込む
+    std::ifstream ifs(recodeFilePath, std::ios::ate | std::ios::binary);
+    // ファイルに入っている局面の数
+    const int M = ifs.tellg() / sizeof(Recode);
+    std::vector<Recode> recodes(M);
+    //beginから0バイトのところにストリーム位置を変更
+    ifs.seekg(0, std::ios::beg);
+    ifs.read((char*)&recodes[0], M * sizeof(Recode));
+    // N回ループ
+    for (int k = 0; k < N; ++k) {
+        for (Recode recode : recodes) {
             // 残差
-            int r = recode.result - evaluate(recode.p, recode.o);
-
+            int r = (recode.result - evaluate(recode.p, recode.o)) * 1000;
             // このデータで出現する各特徴に対し更新分を加算していく
             // horver
             for (int i = 0; i < 8; ++i) {
