@@ -1,6 +1,9 @@
 #include <algorithm>
 #include <vector>
 #include <fstream>
+#include <sstream>
+#include <direct.h>
+#include <time.h>
 #include "bitboard.h"
 #include "recode.h"
 #include "evalgen.h"
@@ -137,19 +140,20 @@ static int verDiff[8][6561];
 static int corDiff[4][6561];
 static int mobDiff = 0;
 
+// 結果はhorizontal, vertical, ...の配列に書き込む
 // 評価値は最終石差*1000の近似とする
-void generateEvaluationData(std::string recodeFilePath) {
+static void calculateEvaluationValue(std::string recodeFilePath) {
     // 更新の繰り返し回数
-    constexpr int N = 10000;
+    constexpr int N = 100;
     // 配列の初期化（0埋め）
     // diffの方は0毎回0になるはずですが一応
-    std::fill(horizontal, horizontal + 8 * 6561, 0);
-    std::fill(vertical, vertical + 8 * 6561, 0);
-    std::fill(corner, corner + 4 * 6561, 0);
+    std::fill((int*)horizontal, (int*)(horizontal + 8), 0);
+    std::fill((int*)vertical, (int*)(vertical + 8), 0);
+    std::fill((int*)corner, (int*)(corner + 4), 0);    
     mobility = 0;
-    std::fill(horDiff, horDiff + 8 * 6561, 0);
-    std::fill(verDiff, verDiff + 8 * 6561, 0);
-    std::fill(corDiff, corDiff + 4 * 6561, 0);
+    std::fill((int*)horDiff, (int*)(horDiff + 8), 0);
+    std::fill((int*)verDiff, (int*)(verDiff + 8), 0);
+    std::fill((int*)corDiff, (int*)(corDiff + 4), 0);    
     mobDiff = 0;
     // ファイルを何回も読むのは無駄なので最初に全部読み込む
     std::ifstream ifs(recodeFilePath, std::ios::ate | std::ios::binary);
@@ -206,6 +210,33 @@ void generateEvaluationData(std::string recodeFilePath) {
         mobility += mobDiff * W;
         mobDiff = 0;
     }
+}
 
-    // ファイルに書き込む
+void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFolderPath) {
+    // 正しいフォルダ以外が指定されたときのことはめんどくさいので考えません
+    std::stringstream ss0;
+    std::stringstream ss1;
+    ss0 << recodesFolderPath;
+    ss1 << outputFolderPath;
+    if (recodesFolderPath.back() != '\\') ss0 << '\\';
+    if (outputFolderPath.back() != '\\') ss1 << '\\';
+    ss1 << time(NULL) << "\\";
+    // フォルダ作成
+    mkdir(ss1.str().c_str());
+
+    // (1-60).binについてそれぞれ計算→保存
+    for (int i = 1; i <= 60; ++i) {
+        std::stringstream _ss0;
+        _ss0 << ss0.str() << i << ".bin";
+        // ファイルパスを渡して計算させる
+        calculateEvaluationValue(_ss0.str());
+        // 保存～
+        std::stringstream _ss1;
+        _ss1 << ss1.str() << i << ".bin";
+        std::ofstream ofs(_ss1.str(), std::ios::binary);
+        ofs.write((char*)horizontal, sizeof(int) * 8 * 6561);
+        ofs.write((char*)vertical, sizeof(int) * 8 * 6561);
+        ofs.write((char*)corner, sizeof(int) * 4 * 6561);
+        ofs.write((char*)&mobility, sizeof(int));
+    }
 }

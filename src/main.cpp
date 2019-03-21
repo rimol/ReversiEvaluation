@@ -1,18 +1,16 @@
 #include <iostream>
 #include <string>
-#include "recgen.h"
+#include "evalgen.h"
  
 int main() {
-	int N, depth;
-	std::string folderPath;
-	std::cout << "Enter N: ";
-	std::cin >> N;
-	std::cout << "Enter a depth:";
-	std::cin >> depth;
-	std::cout << "Enter a folder path: ";
-	std::cin >> folderPath;
+	std::string recodesFolderPath;
+	std::string outputFolderPath;
+	std::cout << "Enter a folder path which it has recodes: ";
+	std::cin >> recodesFolderPath;
+	std::cout << "Enter a folder path where you want to save evaluation files:";
+	std::cin >> outputFolderPath;
 
-	generateRecode(N, depth, folderPath);
+	generateEvaluationFiles(recodesFolderPath, outputFolderPath);
 
 	std::cout << std::endl << "completed!" << std::endl << "Press any key to finish this program:";
 	
