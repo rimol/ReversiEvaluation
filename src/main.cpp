@@ -1,12 +1,14 @@
 #include <algorithm>
 #include <iostream>
 #include <string>
-#include "board.h"
 #include "bitboard.h"
 #include "eval.h"
 #include "evalgen.h"
 #include "engine.h"
 #include "recgen.h"
+
+enum Color { Black, White };
+constexpr Color operator ~(Color c) { return (Color)(c ^ 1); }
 
 void doReversi() {
 	// 評価関数フォルダを指定

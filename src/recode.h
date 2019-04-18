@@ -7,7 +7,7 @@ struct Recode {
     Bitboard o;
     // 何手目の盤面か
     int turn;
-    // 最終石差(黒-白)
+    // 最終石差(pの石の数-oの石の数)
     int result;
 
     Recode() {}

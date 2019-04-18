@@ -6,7 +6,6 @@
 #include <time.h>
 #include <vector>
 #include "bitboard.h"
-#include "board.h"
 #include "recgen.h"
 #include "recode.h"
 #include "solver.h"

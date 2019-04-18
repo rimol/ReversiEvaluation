@@ -196,7 +196,7 @@ struct FFO {
     Bitboard bits[2];
 
     // X: 黒, O: 白, -: 空白マス
-    FFO(std::string boardText, Color _c) : c(_c), bits({0ULL, 0ULL}) {
+    FFO(std::string boardText, Color _c) : c(_c), bits{} {
         Bitboard bit = 1ULL;
         for (char c : boardText) {
             if (c == 'X') bits[Black] |= bit;
@@ -220,9 +220,6 @@ void ffotest() {
     };
 
     for (FFO ffo : boards) {
-        Board b(ffo.c, ffo.bits[Black], ffo.bits[White]);
-        printBoard(b);
-
         auto start = std::chrono::system_clock::now();
         int result = solve(ffo.bits[ffo.c], ffo.bits[~ffo.c]);
         auto end = std::chrono::system_clock::now();

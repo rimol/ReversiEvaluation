@@ -1,6 +1,5 @@
 #include <random>
 #include "bitboard.h"
-#include "board.h"
 
 void testBitboardOperation() {
     // テスト回数
@@ -33,10 +32,6 @@ void testBitboardOperation() {
 
         if (flip0 != flip1) {
             ++diff_getflip;
-
-            Board board(Black, b, w);
-
-            printBoard(board);
 
             printBitboard(flip0);
             printBitboard(flip1);
