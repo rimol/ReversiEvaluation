@@ -7,9 +7,6 @@
 #include "engine.h"
 #include "recgen.h"
 
-enum Color { Black, White };
-constexpr Color operator ~(Color c) { return (Color)(c ^ 1); }
-
 void doReversi() {
 	// 評価関数フォルダを指定
 	std::string folderPath;

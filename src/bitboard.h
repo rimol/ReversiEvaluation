@@ -3,6 +3,9 @@
 #include <iostream>
 #include <stdint.h>
 
+enum Color { Black, White };
+constexpr Color operator ~(Color c) { return (Color)(c ^ 1); }
+
 typedef unsigned long long Bitboard;
 
 // CPU命令は使わずに実装する.
