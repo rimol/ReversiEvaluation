@@ -8,15 +8,15 @@
 std::string evalValuesFolderPath = "";
 
 // この配列たちは、評価値生成のときも使うのでグローバルにしています。
-int horizontal[8][6561];
-int vertical[8][6561];
-int corner[4][6561];
-int mobility = 0;
+double horizontal[8][6561];
+double vertical[8][6561];
+double corner[4][6561];
+double mobility = 0;
 
 void clearArrays() {
-    std::fill((int*)horizontal, (int*)(horizontal + 8), 0);
-    std::fill((int*)vertical, (int*)(vertical + 8), 0);
-    std::fill((int*)corner, (int*)(corner + 4), 0);    
+    std::fill((double*)horizontal, (double*)(horizontal + 8), 0);
+    std::fill((double*)vertical, (double*)(vertical + 8), 0);
+    std::fill((double*)corner, (double*)(corner + 4), 0);    
     mobility = 0;
 }
 
@@ -27,14 +27,14 @@ void changeEvaluationTables(int t) {
     ss << t << ".bin";
 
     std::ifstream ifs(ss.str(), std::ios::binary);
-    ifs.read((char*)horizontal, sizeof(int) * 8 * 6561);
-    ifs.read((char*)vertical, sizeof(int) * 8 * 6561);
-    ifs.read((char*)corner, sizeof(int) * 4 * 6561);
-    ifs.read((char*)&mobility, sizeof(int));
+    ifs.read((char*)horizontal, sizeof(double) * 8 * 6561);
+    ifs.read((char*)vertical, sizeof(double) * 8 * 6561);
+    ifs.read((char*)corner, sizeof(double) * 4 * 6561);
+    ifs.read((char*)&mobility, sizeof(double));
 }
 
-int evaluate(Bitboard p, Bitboard o) {
-    int e = 0;
+double evaluate(Bitboard p, Bitboard o) {
+    double e = 0;
 
     e += horizontal[0][extractHorizontal(0, p, o)];
     e += horizontal[1][extractHorizontal(1, p, o)];
@@ -59,7 +59,7 @@ int evaluate(Bitboard p, Bitboard o) {
     e += corner[2][extractCorner(2, p, o)];
     e += corner[3][extractCorner(3, p, o)];
 
-    e += getMobility(p, o) * mobility;
+    e += (double)getMobility(p, o) * mobility;
 
     return e;
 }

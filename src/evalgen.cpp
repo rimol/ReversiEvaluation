@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <vector>
 #include <fstream>
 #include <sstream>
@@ -10,23 +11,20 @@
 #include "evalgen.h"
 
 // 更新分の保存用
-static int horDiff[8][6561];
-static int verDiff[8][6561];
-static int corDiff[4][6561];
-static int mobDiff = 0;
+static double horDiff[8][6561];
+static double verDiff[8][6561];
+static double corDiff[4][6561];
+static double mobDiff = 0.0;
 
 // 結果はhorizontal, vertical, ...の配列に書き込む
-// 評価値は最終石差*1000の近似とする
-static void calculateEvaluationValue(std::string recodeFilePath) {
-    // 更新の繰り返し回数
-    constexpr int N = 100;
+static void calculateEvaluationValue(std::string recodeFilePath, double beta) {
     // 配列の初期化（0埋め）
     clearArrays();
     // diffの方は0毎回0になってるはずですが一応
-    std::fill((int*)horDiff, (int*)(horDiff + 8), 0);
-    std::fill((int*)verDiff, (int*)(verDiff + 8), 0);
-    std::fill((int*)corDiff, (int*)(corDiff + 4), 0);    
-    mobDiff = 0;
+    std::fill((double*)horDiff, (double*)(horDiff + 8), 0);
+    std::fill((double*)verDiff, (double*)(verDiff + 8), 0);
+    std::fill((double*)corDiff, (double*)(corDiff + 4), 0);    
+    mobDiff = 0.0;
     // ファイルを何回も読むのは無駄なので最初に全部読み込む
     std::ifstream ifs(recodeFilePath, std::ios::ate | std::ios::binary);
     // ファイルに入っている局面の数
@@ -35,11 +33,18 @@ static void calculateEvaluationValue(std::string recodeFilePath) {
     //beginから0バイトのところにストリーム位置を変更
     ifs.seekg(0, std::ios::beg);
     ifs.read((char*)&recodes[0], M * sizeof(Recode));
-    // N回ループ
-    for (int k = 0; k < N; ++k) {
+
+    constexpr double allowableVariance = 5.0;
+    // ループカウンタ
+    long long counter = 0;
+    // ピピーーッ！無限ループ！！逮捕！！
+    while(true) {
+        // 偏差の2乗の和
+        double squaredDeviationSum = 0;
         for (Recode recode : recodes) {
             // 残差
-            int r = (recode.result - evaluate(recode.p, recode.o)) * 1000;
+            double r = ((double)recode.result - evaluate(recode.p, recode.o));
+            squaredDeviationSum += pow(r, 2);
             // このデータで出現する各特徴に対し更新分を加算していく
             // horver
             for (int i = 0; i < 8; ++i) {
@@ -60,31 +65,36 @@ static void calculateEvaluationValue(std::string recodeFilePath) {
             mobDiff += r * getMobility(recode.p, recode.o);
         }
 
+        // 終了チェック
+        if (squaredDeviationSum / (double)M <= allowableVariance) break;
+
         // 更新分を適用。
-        const int alpha = 57;
+        const double alpha = beta / (double)M;
         // horver
         for (int i = 0; i < 8; ++i) {
             for (int j = 0; j < 6561; ++j) {
-                horizontal[i][j] += horDiff[i][j] * alpha / N;
-                vertical[i][j] += verDiff[i][j] * alpha / N;
+                horizontal[i][j] += horDiff[i][j] * alpha;
+                vertical[i][j] += verDiff[i][j] * alpha;
                 // 掃除もついでにする.
-                horDiff[i][j] = verDiff[i][j] = 0;
+                horDiff[i][j] = verDiff[i][j] = 0.0;
             }
         }
         // corner
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 6561; ++j) {
-                corner[i][j] += corDiff[i][j] * alpha / N;
-                corDiff[i][j] = 0;
+                corner[i][j] += corDiff[i][j] * alpha;
+                corDiff[i][j] = 0.0;
             }
         }
         // mobility
-        mobility += mobDiff * alpha / N;
-        mobDiff = 0;
+        mobility += mobDiff * alpha;
+        mobDiff = 0.0;
+
+        ++counter;
     }
 }
 
-void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFolderPath) {
+void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFolderPath, double beta) {
     // 正しいフォルダ以外が指定されたときのことはめんどくさいので考えません
     std::stringstream ss0;
     std::stringstream ss1;
@@ -97,18 +107,18 @@ void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFo
     mkdir(ss1.str().c_str());
 
     // (1-60).binについてそれぞれ計算→保存
-    for (int i = 1; i <= 60; ++i) {
+    for (int i = 30; i <= 60; ++i) {
         std::stringstream _ss0;
         _ss0 << ss0.str() << i << ".bin";
         // ファイルパスを渡して計算させる
-        calculateEvaluationValue(_ss0.str());
+        calculateEvaluationValue(_ss0.str(), beta);
         // 保存～
         std::stringstream _ss1;
         _ss1 << ss1.str() << i << ".bin";
         std::ofstream ofs(_ss1.str(), std::ios::binary);
-        ofs.write((char*)horizontal, sizeof(int) * 8 * 6561);
-        ofs.write((char*)vertical, sizeof(int) * 8 * 6561);
-        ofs.write((char*)corner, sizeof(int) * 4 * 6561);
-        ofs.write((char*)&mobility, sizeof(int));
+        ofs.write((char*)horizontal, sizeof(double) * 8 * 6561);
+        ofs.write((char*)vertical, sizeof(double) * 8 * 6561);
+        ofs.write((char*)corner, sizeof(double) * 4 * 6561);
+        ofs.write((char*)&mobility, sizeof(double));
     }
 }
