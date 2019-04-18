@@ -112,7 +112,7 @@ void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFo
     mkdir(ss1.str().c_str());
 
     // (1-60).binについてそれぞれ計算→保存
-    for (int i = 30; i <= 60; ++i) {
+    for (int i = 60; i >= 1; --i) {
         std::stringstream _ss0;
         _ss0 << ss0.str() << i << ".bin";
         // ファイルパスを渡して計算させる
