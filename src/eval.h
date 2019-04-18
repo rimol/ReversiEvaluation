@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include "bitboard.h"
 
@@ -107,13 +109,13 @@ inline Feature extractCorner(int n, Bitboard p, Bitboard o) {
 // 評価関数で使うフォルダの指定
 extern std::string evalValuesFolderPath;
 
-extern int horizontal[8][6561];
-extern int vertical[8][6561];
-extern int corner[4][6561];
-extern int mobility = 0;
+extern double horizontal[8][6561];
+extern double vertical[8][6561];
+extern double corner[4][6561];
+extern double mobility;
 
 // 上の配列すべてを0初期化する
 void clearArrays();
 // 盤上にt + 4コ石がある盤面を評価するデータに変更する
 void changeEvaluationTables(int t);
-int evaluate(Bitboard p, Bitboard o);
+double evaluate(Bitboard p, Bitboard o);
