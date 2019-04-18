@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 #include "bitboard.h"
-#include "board.h"
 #include "solver.h"
 
 // v = ミニマックス値
