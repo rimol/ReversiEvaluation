@@ -6,7 +6,7 @@ int chooseBestMove(Bitboard p, Bitboard o) {
     // この番の自分の手を打ったあとの相手の手番における評価値を計算するので+1する
     changeEvaluationTables(stoneCount - 4 + 1);
 
-    int minscore = 64;
+    int minscore = 1000000007;
     int sq = -1;
 
     Bitboard moves = getMoves(p, o);
