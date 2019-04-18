@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <direct.h>
@@ -91,6 +92,10 @@ static void calculateEvaluationValue(std::string recodeFilePath, double beta) {
         mobDiff = 0.0;
 
         ++counter;
+
+        if (counter % 1000 == 0) {
+            std::cout << "Current variance is " << squaredDeviationSum / (double)M << ".\n";
+        }
     }
 }
 
