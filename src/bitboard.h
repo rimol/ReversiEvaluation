@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <immintrin.h>
 #include <stdint.h>
 
 enum Color { Black, White };
@@ -38,6 +39,20 @@ inline Bitboard popcount(Bitboard x) {
 inline Bitboard tzcnt(Bitboard x) {
     // return popcount(~x & x - 1ULL);
     return __builtin_ctzll(x);
+}
+
+inline Bitboard pext(Bitboard x, Bitboard mask) {
+    /*
+    maskで立っているビットの数は8に限定しています
+    Bitboard extracted = 0ULL;
+    for (Bitboard i = 1ULL; i < 256ULL; i <<= 1) {
+        Bitboard lb = mask & -mask;
+        if (x & lb) extracted |= i;
+        mask ^= lb;
+    }
+    return extracted;
+    */
+    return _pext_u64(x, mask);
 }
 
 // コピペ

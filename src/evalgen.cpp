@@ -12,20 +12,20 @@
 #include "evalgen.h"
 
 // 更新分の保存用
-static double horDiff[8][6561];
-static double verDiff[8][6561];
-static double corDiff[4][6561];
+static double valDiff[FeatureNum][6561];
 static double mobDiff = 0.0;
+
+// 使う棋譜中で各特徴が出現する回数
+// ステップサイズを決めるのに使う
+static int featureFrequency[FeatureNum][6561];
 
 // 結果はhorizontal, vertical, ...の配列に書き込む
 static void calculateEvaluationValue(std::string recodeFilePath, double beta) {
     // 配列の初期化（0埋め）
-    clearArrays();
-    // diffの方は0毎回0になってるはずですが一応
-    std::fill((double*)horDiff, (double*)(horDiff + 8), 0);
-    std::fill((double*)verDiff, (double*)(verDiff + 8), 0);
-    std::fill((double*)corDiff, (double*)(corDiff + 4), 0);    
-    mobDiff = 0.0;
+    std::fill((double*)evaluationValues, (double*)(evaluationValues + FeatureNum), 0);
+    std::fill((double*)featureFrequency, (double*)(featureFrequency + FeatureNum), 0);
+    mobilityWeight = mobDiff = 0.0;
+
     // ファイルを何回も読むのは無駄なので最初に全部読み込む
     std::ifstream ifs(recodeFilePath, std::ios::ate | std::ios::binary);
     // ファイルに入っている局面の数
@@ -35,9 +35,15 @@ static void calculateEvaluationValue(std::string recodeFilePath, double beta) {
     ifs.seekg(0, std::ios::beg);
     ifs.read((char*)&recodes[0], M * sizeof(Recode));
 
-    constexpr double allowableVariance = 5.0;
-    // ループカウンタ
-    long long counter = 0;
+    // 特徴の出現回数を予め計算しておく。
+    for (Recode recode : recodes) {
+        for (int i = 0; i < FeatureNum; ++i) {
+            ++featureFrequency[i][extract(recode.p, recode.o, i)];
+        }
+    }
+
+    double previousVariance = 0.0;
+    long long loopCounter = 0;
     // ピピーーッ！無限ループ！！逮捕！！
     while(true) {
         // 偏差の2乗の和
@@ -45,56 +51,39 @@ static void calculateEvaluationValue(std::string recodeFilePath, double beta) {
         for (Recode recode : recodes) {
             // 残差
             double r = ((double)recode.result - evaluate(recode.p, recode.o));
-            squaredDeviationSum += pow(r, 2);
+            squaredDeviationSum += r * r;
             // このデータで出現する各特徴に対し更新分を加算していく
-            // horver
-            for (int i = 0; i < 8; ++i) {
-                // hor[i], ver[i]
-                Feature hor_i = extractHorizontal(i, recode.p, recode.o);
-                Feature ver_i = extractVertical(i, recode.p, recode.o);
-                horDiff[i][hor_i] += r;
-                verDiff[i][ver_i] += r;
-            }
-
-            // corner
-            for (int i = 0; i < 4; ++i) {
-                Feature cor_i = extractCorner(i, recode.p, recode.o);
-                corDiff[i][cor_i] += r;
+            for (int i = 0; i < FeatureNum; ++i) {
+                valDiff[i][extract(recode.p, recode.o, i)] += r;
             }
 
             // mobility
             mobDiff += r * getMobility(recode.p, recode.o);
         }
 
-        // 終了チェック
-        if (squaredDeviationSum / (double)M <= allowableVariance) break;
-
-        // 更新分を適用。
-        const double alpha = beta / (double)M;
-        // horver
-        for (int i = 0; i < 8; ++i) {
-            for (int j = 0; j < 6561; ++j) {
-                horizontal[i][j] += horDiff[i][j] * alpha;
-                vertical[i][j] += verDiff[i][j] * alpha;
-                // 掃除もついでにする.
-                horDiff[i][j] = verDiff[i][j] = 0.0;
-            }
+        double currentVariance = squaredDeviationSum / (double)M;
+        // 終了条件わからん
+        // 「前回との差がピッタリ0」を条件にすると終わらない
+        if (std::abs(previousVariance - currentVariance) < 10e-6) {
+            std::cout << "Done. Final variance is " << currentVariance << std::endl;
+            break;
         }
-        // corner
-        for (int i = 0; i < 4; ++i) {
+
+        previousVariance = currentVariance;
+
+        // update
+        for (int i = 0; i < FeatureNum; ++i) {
             for (int j = 0; j < 6561; ++j) {
-                corner[i][j] += corDiff[i][j] * alpha;
-                corDiff[i][j] = 0.0;
+                evaluationValues[i][j] += valDiff[i][j] * std::min(beta / 50.0, beta / (double)featureFrequency[i][j]);
+                valDiff[i][j] = 0.0;
             }
         }
         // mobility
-        mobility += mobDiff * alpha;
+        mobilityWeight += mobDiff * beta / (double)M;
         mobDiff = 0.0;
 
-        ++counter;
-
-        if (counter % 1000 == 0) {
-            std::cout << "Current variance is " << squaredDeviationSum / (double)M << ".\n";
+        if (++loopCounter % 1000 == 0) {
+            std::cout << "Current variance is " << currentVariance << ".\n";
         }
     }
 }
@@ -121,9 +110,7 @@ void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFo
         std::stringstream _ss1;
         _ss1 << ss1.str() << i << ".bin";
         std::ofstream ofs(_ss1.str(), std::ios::binary);
-        ofs.write((char*)horizontal, sizeof(double) * 8 * 6561);
-        ofs.write((char*)vertical, sizeof(double) * 8 * 6561);
-        ofs.write((char*)corner, sizeof(double) * 4 * 6561);
-        ofs.write((char*)&mobility, sizeof(double));
+        ofs.write((char*)evaluationValues, sizeof(double) * FeatureNum * 6561);
+        ofs.write((char*)&mobilityWeight, sizeof(double));
     }
 }
