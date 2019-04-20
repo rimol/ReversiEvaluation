@@ -6,6 +6,7 @@
 #include "evalgen.h"
 #include "engine.h"
 #include "recgen.h"
+#include "solver.h"
 
 void doReversi() {
 	// 評価関数フォルダを指定
@@ -116,6 +117,7 @@ int main() {
 		if (command == "reversi") doReversi();
 		else if (command == "recgen") doRecGen();
 		else if (command == "evalgen") doEvalGen();
+		else if (command == "ffo") ffotest();
  		else if (command == "exit") break; 
 	}
 
