@@ -14,6 +14,7 @@
 // 更新分の保存用
 static double valDiff[FeatureNum][6561];
 static double mobDiff = 0.0;
+static double interceptDiff = 0.0;
 
 // 使う棋譜中で各特徴が出現する回数
 // ステップサイズを決めるのに使う
@@ -24,7 +25,7 @@ static void calculateEvaluationValue(std::string recodeFilePath, double beta) {
     // 配列の初期化（0埋め）
     std::fill((double*)evaluationValues, (double*)(evaluationValues + FeatureNum), 0);
     std::fill((double*)featureFrequency, (double*)(featureFrequency + FeatureNum), 0);
-    mobilityWeight = mobDiff = 0.0;
+    mobilityWeight = mobDiff = intercept = interceptDiff = 0.0;
 
     // ファイルを何回も読むのは無駄なので最初に全部読み込む
     std::ifstream ifs(recodeFilePath, std::ios::ate | std::ios::binary);
@@ -59,6 +60,7 @@ static void calculateEvaluationValue(std::string recodeFilePath, double beta) {
 
             // mobility
             mobDiff += r * getMobility(recode.p, recode.o);
+            interceptDiff += r;
         }
 
         double currentVariance = squaredDeviationSum / (double)M;
@@ -78,9 +80,10 @@ static void calculateEvaluationValue(std::string recodeFilePath, double beta) {
                 valDiff[i][j] = 0.0;
             }
         }
-        // mobility
         mobilityWeight += mobDiff * beta / (double)M;
-        mobDiff = 0.0;
+        intercept += interceptDiff * beta / (double)M;
+
+        mobDiff = interceptDiff = 0.0;
 
         if (++loopCounter % 1000 == 0) {
             std::cout << "Current variance is " << currentVariance << ".\n";
@@ -112,5 +115,6 @@ void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFo
         std::ofstream ofs(_ss1.str(), std::ios::binary);
         ofs.write((char*)evaluationValues, sizeof(double) * FeatureNum * 6561);
         ofs.write((char*)&mobilityWeight, sizeof(double));
+        ofs.write((char*)&intercept, sizeof(double));
     }
 }

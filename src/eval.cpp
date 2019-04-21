@@ -9,7 +9,8 @@ std::string evalValuesFolderPath = "";
 
 // 評価値生成のときも使うのでグローバルにしています。
 double evaluationValues[FeatureNum][6561];
-double mobilityWeight = 0;
+double mobilityWeight = 0.0;
+double intercept = 0.0;
 
 void changeEvaluationTables(int t) {
     std::stringstream ss;
@@ -20,10 +21,11 @@ void changeEvaluationTables(int t) {
     std::ifstream ifs(ss.str(), std::ios::binary);
     ifs.read((char*)evaluationValues, sizeof(double) * FeatureNum * 6561);
     ifs.read((char*)&mobilityWeight, sizeof(double));
+    ifs.read((char*)&intercept, sizeof(double));
 }
 
 double evaluate(Bitboard p, Bitboard o) {
-    double e = 0;
+    double e = intercept;
     for (int i = 0; i < FeatureNum; ++i) {
         e += evaluationValues[i][extract(p, o, i)];
     }
