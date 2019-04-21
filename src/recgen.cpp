@@ -13,19 +13,15 @@
 void generateRecode(int n, int depth, std::string folderPath) {
     // 指定されたフォルダに保存用フォルダを作成
     // フォルダ名は現在時刻
-    std::stringstream ss;
-    ss << folderPath;
-    if (folderPath.back() != '\\') ss << '\\';
-    ss << time(NULL);// << ".bin";
+    if (folderPath.back() != '\\') folderPath += '\\';
+    folderPath += std::to_string(time(NULL)) + '\\';
 
     // フォルダ作成
-    mkdir(ss.str().c_str());
+    mkdir(folderPath.c_str());
 
     std::ofstream ofss[60];
     for (int i = 0; i < 60; ++i) {
-        std::stringstream _ss;
-        _ss << ss.str() << "\\" << (i + 1) << ".bin";
-        ofss[i] = std::ofstream(_ss.str(), std::ios::binary);
+        ofss[i] = std::ofstream(folderPath + std::to_string(i + 1) + ".bin", std::ios::binary);
     }
 
     std::random_device rnd; // 非決定的乱数生成器、これでメルセンヌ・ツイスタのシードを設定
