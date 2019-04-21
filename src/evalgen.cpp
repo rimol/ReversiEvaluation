@@ -20,8 +20,8 @@ static double interceptDiff = 0.0;
 // ステップサイズを決めるのに使う
 static int featureFrequency[FeatureNum][6561];
 
-// 結果はhorizontal, vertical, ...の配列に書き込む
-static void calculateEvaluationValue(std::string recodeFilePath, double beta) {
+// 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
+static double calculateEvaluationValue(std::string recodeFilePath, double beta) {
     // 配列の初期化（0埋め）
     std::fill((double*)evaluationValues, (double*)(evaluationValues + FeatureNum), 0);
     std::fill((double*)featureFrequency, (double*)(featureFrequency + FeatureNum), 0);
@@ -67,8 +67,8 @@ static void calculateEvaluationValue(std::string recodeFilePath, double beta) {
         // 終了条件わからん
         // 「前回との差がピッタリ0」を条件にすると終わらない
         if (std::abs(previousVariance - currentVariance) < 10e-6) {
-            std::cout << "Done. Final variance is " << currentVariance << std::endl;
-            break;
+            std::cout << "Done. variance: " << currentVariance << ", loop: " << loopCounter << " times" << std::endl;
+            return currentVariance;
         }
 
         previousVariance = currentVariance;
@@ -86,7 +86,7 @@ static void calculateEvaluationValue(std::string recodeFilePath, double beta) {
         mobDiff = interceptDiff = 0.0;
 
         if (++loopCounter % 1000 == 0) {
-            std::cout << "Current variance is " << currentVariance << ".\n";
+            std::cout << "current variance: " << currentVariance << ", loop: " << loopCounter << " times";
         }
     }
 }
@@ -103,13 +103,17 @@ void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFo
     // フォルダ作成
     mkdir(ss1.str().c_str());
 
+    // 分散を保存するファイルを作る
+    std::ofstream vofs((ss1.str() + "variance.txt").c_str());
+
     // (1-60).binについてそれぞれ計算→保存
     for (int i = 60; i >= 1; --i) {
         std::stringstream _ss0;
         _ss0 << ss0.str() << i << ".bin";
         // ファイルパスを渡して計算させる
-        calculateEvaluationValue(_ss0.str(), beta);
+        double variance = calculateEvaluationValue(_ss0.str(), beta);
         // 保存～
+        vofs << i << ".bin: " << variance << std::endl; 
         std::stringstream _ss1;
         _ss1 << ss1.str() << i << ".bin";
         std::ofstream ofs(_ss1.str(), std::ios::binary);
