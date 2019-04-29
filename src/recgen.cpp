@@ -5,6 +5,7 @@
 #include <string>
 #include <time.h>
 #include <vector>
+#include "engine.h"
 #include "bitboard.h"
 #include "recgen.h"
 #include "recode.h"
@@ -31,17 +32,15 @@ void generateRecode(int n, int depth, std::string folderPath) {
 
     // n回ループ
     for (int i = 0; i < n; ++i) {
-        bool passed = false;
-        int result = 0;
         // 終局までの手数(最初から4つマスが埋まっているので、最大60)
         int turns = 60;
+        bool passed = false;
         // 初期
-        recodes[0] = Recode(0x0000000810000000ULL, 0x0000001008000000ULL, 0);
+        recodes[0] = Recode(0x0000000810000000ULL, 0x0000001008000000ULL, Black, 0);
         
-        for (int j = 1; j <= 60; ++j) {
+        for (int j = 1; j <= 60 - depth; ++j) {
             const Recode current = recodes[j - 1];
-
-            Bitboard moves = getMoves(current.p, current.o);
+            Bitboard moves = getMoves(current.p(), current.o());
             // 打つ手がない！
             if (moves == 0ULL) {
                 // ２回連続パス=終局
@@ -53,59 +52,27 @@ void generateRecode(int n, int depth, std::string folderPath) {
                 else {
                     passed = true;
                     // 手番を変える
-                    recodes[--j] = Recode(current.o, current.p, current.turn);
+                    recodes[--j].c = ~current.c;
                     continue;
                 }
             }
             else {
-                Recode next(current.o, current.p, j);
-                if (j <= 60 - depth) {
-                    // 打つ手をランダムに決める
-                    int chosen = mt() % (popcount(moves));
-                    // 下からビットを剥がしていく
-                    while (chosen--) moves &= moves - 1ULL;
-                    // 一番下以外のビットを消す
-                    Bitboard sqbit = -moves & moves;
-                    Bitboard flip = getFlip(current.p, current.o, sqbit);
-
-                    next.o ^= flip | sqbit;
-                    next.p ^= flip;
-                }
-                // 残りdepthマスからsolverを使います
-                else {
-                    int minscore = 64;
-                    Bitboard bestMove = 0ULL; // 適当
-                    Bitboard bestFlip = 0ULL; // 適当
-                    // 1手すすめて、相手から見たスコアを計算、それが最小になるように取る
-                    while (moves) {
-                        Bitboard sqbit = moves & -moves;
-                        Bitboard flip = getFlip(current.p, current.o, sqbit);
-
-                        int score = solve(current.o ^ flip, current.p ^ flip ^ sqbit);
-                        if (score < minscore) {
-                            minscore = score;
-                            bestMove = sqbit;
-                            bestFlip = flip;
-                        }
-
-                        moves ^= sqbit;
-                    }
-
-                    next.o ^= bestFlip | bestMove;
-                    next.p ^= bestFlip;
-                }
-
+                Recode next(current.board[Black], current.board[White], ~current.c, j);
+                int sq = chooseRandomMove(current.p(), current.o(), mt);
+                Bitboard flip = getFlip(current.p(), current.o(), 1ULL << sq);
+                next.board[current.c] ^= flip | (1ULL << sq);
+                next.board[~current.c] ^= flip;
                 recodes[j] = next;
                 passed = false;
             }
         }
-
-        result = popcount(recodes[turns].p) - popcount(recodes[turns].o);
+        // 残りdepthマスでsolverを使う.
 
         // さっき作ったフォルダ内に保存していく
+        int result = popcount(recodes[turns].board[Black]) - popcount(recodes[turns].board[White]);
         // 初期盤面(0手目終了時)は入れない。
         for (int j = 1; j <= turns; ++j) {
-            recodes[j].result = result;
+            recodes[j].result = ((recodes[j].c ^ 1 << 1) - 1) * result;
             ofss[j - 1].write(reinterpret_cast<char*>(&recodes[j]), sizeof(Recode));
         }
     }

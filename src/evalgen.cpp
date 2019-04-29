@@ -39,7 +39,7 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
     // 特徴の出現回数を予め計算しておく。
     for (Recode recode : recodes) {
         for (int i = 0; i < FeatureNum; ++i) {
-            ++featureFrequency[i][extract(recode.p, recode.o, i)];
+            ++featureFrequency[i][extract(recode.p(), recode.o(), i)];
         }
     }
 
@@ -51,22 +51,22 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
         double squaredDeviationSum = 0;
         for (Recode recode : recodes) {
             // 残差
-            double r = ((double)recode.result - evaluate(recode.p, recode.o));
+            double r = ((double)recode.result - evaluate(recode.p(), recode.o()));
             squaredDeviationSum += r * r;
             // このデータで出現する各特徴に対し更新分を加算していく
             for (int i = 0; i < FeatureNum; ++i) {
-                valDiff[i][extract(recode.p, recode.o, i)] += r;
+                valDiff[i][extract(recode.p(), recode.o(), i)] += r;
             }
 
             // mobility
-            mobDiff += r * getMobility(recode.p, recode.o);
+            mobDiff += r * getMobility(recode.p(), recode.o());
             interceptDiff += r;
         }
 
         double currentVariance = squaredDeviationSum / (double)M;
         // 終了条件わからん
         // 「前回との差がピッタリ0」を条件にすると終わらない
-        if (std::abs(previousVariance - currentVariance) < 10e-6) {
+        if (std::abs(previousVariance - currentVariance) < 10e-4) {
             std::cout << "Done. variance: " << currentVariance << ", loop: " << loopCounter << " times" << std::endl;
             return currentVariance;
         }
@@ -86,7 +86,7 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
         mobDiff = interceptDiff = 0.0;
 
         if (++loopCounter % 1000 == 0) {
-            std::cout << "current variance: " << currentVariance << ", loop: " << loopCounter << " times";
+            std::cout << "current variance: " << currentVariance << ", loop: " << loopCounter << " times" << std::endl;
         }
     }
 }
@@ -103,7 +103,7 @@ void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFo
     std::ofstream vofs((outputFolderPath + "variance.txt").c_str());
 
     // (1-60).binについてそれぞれ計算→保存
-    for (int i = 60; i >= 1; --i) {
+    for (int i = 21; i >= 13; --i) {
         // ファイルパスを渡して計算させる
         double variance = calculateEvaluationValue(recodesFolderPath + std::to_string(i) + ".bin", beta);
         // 保存～
