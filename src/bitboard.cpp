@@ -2,6 +2,12 @@
 #include <random>
 #include "bitboard.h"
 
+std::istream& operator >> (std::istream& is, Color& c) {
+    int t; is >> t;
+    c = (Color)t;
+    return is;
+}
+
 // a <= x <= bか?
 static bool within(int a, int b, int x) {
     return a <= x && x <= b;

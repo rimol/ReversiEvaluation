@@ -6,6 +6,7 @@
 
 enum Color { Black, White };
 constexpr Color operator ~(Color c) { return (Color)(c ^ 1); }
+std::istream& operator >> (std::istream& is, Color& c);
 
 typedef unsigned long long Bitboard;
 

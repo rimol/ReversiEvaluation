@@ -9,33 +9,47 @@
 #include "solver.h"
 
 void doReversi() {
-	// 評価関数フォルダを指定
-	std::string folderPath;
+	int AlphabetToNumber[1 << 8];
+	AlphabetToNumber['a'] = 7;
+	AlphabetToNumber['b'] = 6;
+	AlphabetToNumber['c'] = 5;
+	AlphabetToNumber['d'] = 4;
+	AlphabetToNumber['e'] = 3;
+	AlphabetToNumber['f'] = 2;
+	AlphabetToNumber['g'] = 1;
+	AlphabetToNumber['h'] = 0;
+
+	Color human;
+	int depth;
+	std::cout << "Choose your stone color from black(0) or white(1):";
+	std::cin >> human;
+	std::cout << "Enter the search depth:";
+	std::cin >> depth;
 	std::cout << "Enter a folder path that includes eval files:";
-	std::cin >> folderPath;
+	std::cin >> evalValuesFolderPath;
 
-	evalValuesFolderPath = folderPath;
-
-	// コンピュータは白
+	bool passed = false;
+	Color current = Black;
 	Bitboard p = 0x0000000810000000ULL;
 	Bitboard o = 0x0000001008000000ULL;
-	Color current = Black;
-	bool passed = false;
 	while (true) {
 		Bitboard moves = getMoves(p, o);
 		if (moves == 0ULL) {
-			std::cout << "Pass" << std::endl;
 			if (passed) {
-				std::cout << "The game is over" << std::endl;
+				std::cout << "The game is over." << std::endl;
 				break;
 			}
 			else {
+				std::cout << "Pass" << std::endl;
 				passed = true;
 			}
 		}
 		else {
 			// 盤面を表示する
+			std::cout << " ABCDEFGH" << std::endl;
 			for (int i = 63; i >= 0; --i) {
+				if (i % 8 == 7) std::cout << (8 - i / 8);
+
         		if (p >> i & 1ULL) {
             		std::cout << (current == Black ? 'X' : 'O');
         		}
@@ -51,21 +65,16 @@ void doReversi() {
 
         		if (i % 8 == 0) std::cout << std::endl;
     		}
+			std::cout << "p:" << (current == Black ? "Black " : "White ") << "p: " << popcount(p) << " o: " << popcount(o) << std::endl;
 
 			// 入力を待つ
 			int sq;
-			if (current == Black) {
-				std::cout << "choose your next move from: ";
-				Bitboard t(moves);
-				while (t) {
-					Bitboard b = t & -t;
-					std::cout << tzcnt(b);
-					t ^= b;
-					std::cout << (t ? ", " : "\n");
-				}
-				std::cin >> sq;
+			if (current == human) {
+				std::string pos;
+				std::cin >> pos;
+				sq = AlphabetToNumber[pos[0]] + (7 - (pos[1] - '1')) * 8;
 			}
-			else sq = chooseBestMove(p, o);
+			else sq = chooseBestMove(p, o, depth);
 
 			Bitboard sqbit = 1ULL << sq;
 			Bitboard flip = getFlip(p, o, sqbit);
