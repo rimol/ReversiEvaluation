@@ -1,27 +1,56 @@
+#include "eval.h"
 #include "engine.h"
 
-int chooseBestMove(Bitboard p, Bitboard o) {
+double alphabeta(Bitboard p, Bitboard o, double min, double max, int depth) {
+    if (depth == 0) return evaluate(p, o);
+
+    Bitboard moves = getMoves(p, o);
+    while (moves) {
+        Bitboard sqbit = moves & -moves;
+        Bitboard flip = getFlip(p, o, sqbit);
+
+        double score = -alphabeta(o ^ flip, p ^ flip ^ sqbit, -max, -min, depth - 1);
+        if (score >= max) return score;
+
+        min = std::max(score, min);
+        moves ^= sqbit;
+    }
+
+    return min;
+}
+
+int chooseBestMove(Bitboard p, Bitboard o, int depth) {
     // 下で呼ぶ評価関数で使う評価値を読み込む
     int stoneCount = popcount(p | o);
-    // この番の自分の手を打ったあとの相手の手番における評価値を計算するので+1する
-    changeEvaluationTables(stoneCount - 4 + 1);
+    changeEvaluationTables(stoneCount - 4 + depth);
 
-    int minscore = 1000000007;
+    double bestScore = -10e9+7;
     int sq = -1;
 
     Bitboard moves = getMoves(p, o);
     while (moves) {
         Bitboard sqbit = moves & -moves;
         Bitboard flip = getFlip(p, o, sqbit);
-        // 石をおいた次の手番のoからみた評価値を計算する。
-        // これが最小になるような手が最も良い手。
-        int score = evaluate(o ^ flip, p ^ flip ^ sqbit);
-        if (score < minscore) {
-            minscore = score;
+
+        double score = -alphabeta(o ^ flip, p ^ flip ^ sqbit, -10e9+7, -bestScore, depth - 2);
+        if (score > bestScore) {
+            bestScore = score;
             sq = tzcnt(sqbit);
         }
         moves ^= sqbit;
     }
 
     return sq;
+}
+
+int chooseRandomMove(Bitboard p, Bitboard o, std::mt19937& mt) {
+    Bitboard moves = getMoves(p, o);
+    int mobility = popcount(moves);
+    int chosen = mt() % mobility;
+
+    for (int i = 0; i < chosen; ++i) {
+        moves &= moves - 1ULL;
+    }
+
+    return tzcnt(moves);
 }
