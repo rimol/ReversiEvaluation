@@ -195,24 +195,22 @@ inline Bitboard getFlip(Bitboard p, Bitboard o, Bitboard sqbit) {
     Bitboard flip = 0ULL;
     Bitboard mo = o & 0x7e7e7e7e7e7e7e7eULL;
 
-    // t != 0と(t | -t) >> 63 どっちがいいかな
-
     // 左
     Bitboard d = 0x00000000000000feULL * sqbit;
     Bitboard t = (mo | ~d) + 1ULL & d & p;
-    flip = t - ((t | -t) >> 63) & d;
+    flip = t - (t != 0ULL) & d;
     // 左上
     d = 0x8040201008040200ULL * sqbit;
     t = (mo | ~d) + 1ULL & d & p;
-    flip |= t - ((t | -t) >> 63) & d;
+    flip |= t - (t != 0ULL) & d;
     // 上 マスクは付けてはだめ。
     d = 0x0101010101010100ULL * sqbit;
     t = (o | ~d) + 1ULL & d & p;
-    flip |= t - ((t | -t) >> 63) & d;
+    flip |= t - (t != 0ULL) & d;
     // 右上
     d = 0x0002040810204080ULL * sqbit;
     t = (mo | ~d) + 1ULL & d & p;
-    flip |= t - ((t | -t) >> 63) & d;
+    flip |= t - (t != 0ULL) & d;
     // 右
     t = sqbit;
     t |= t >> 1 & mo;
