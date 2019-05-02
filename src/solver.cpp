@@ -10,8 +10,17 @@
 // negamaxかいて. <- 要はpからみた石差の最大値を返す
 // min < v < max
 static int negamax(Bitboard p, Bitboard o, int min, int max, bool passed) {
-    // 全部埋まってるとき
-    if ((p | o) == 0xffffffffffffffffULL) return popcount(p) - popcount(o);
+    if (popcount(p | o) == 63) {
+        Bitboard flip = getFlip(p, o, ~(p | o));
+
+        if (flip != 0ULL) {
+            return popcount(p) - popcount(o) + (popcount(flip) << 1) + 1;
+        }
+        else {
+            flip = getFlip(o, p, ~(p | o));
+            return popcount(p) - popcount(o) - (popcount(flip) << 1) - (flip != 0ULL);
+        }
+    }
 
     Bitboard moves = getMoves(p, o);
 
@@ -97,11 +106,7 @@ static int negascout(Bitboard p, Bitboard o, int min, int max, bool passed) {
     // 一致しなかったorはじめて
     else sp = { 64, -64, p, o };
 
-    // 最大着手数: https://www9.atwiki.jp/othello/pages/50.html 証明すごい..
-    // とりあえず46あれば十分.
-    CandidateMove orderedMoves[46];
-    CandidateMove *cur = orderedMoves;
-
+    std::vector<CandidateMove> orderedMoves;
     while (moves) {
         Bitboard sqbit = moves & -moves;
         Bitboard flip = getFlip(p, o, sqbit);
@@ -117,13 +122,13 @@ static int negascout(Bitboard p, Bitboard o, int min, int max, bool passed) {
             + (opponentsMoves >> 56 & 1ULL)
             + (opponentsMoves >> 63 & 1ULL);
 
-        *cur++ = { nextp, nexto, weightedMobility };
+        orderedMoves.push_back({ nextp, nexto, weightedMobility });
         moves ^= sqbit;
     }
 
     // 少ない順=昇順
     // ここでは使ってないが http://stlalv.la.coocan.jp/sort.html
-    std::sort(orderedMoves, cur - 1);
+    std::sort(orderedMoves.begin(), orderedMoves.end());
 
     // ここから探索
     CandidateMove probablyBestMove = orderedMoves[0];
@@ -139,14 +144,14 @@ static int negascout(Bitboard p, Bitboard o, int min, int max, bool passed) {
         return bestScore;
     }
 
-    const int len = cur - orderedMoves;
+    const int len = orderedMoves.size();
     int a = std::max(bestScore, min); // 探索窓: (max(bestScore, min), max) minはつかうので改変しない
     for (int i = 1; i < len; ++i) {
         CandidateMove cm = orderedMoves[i];
         // (1) v <= roughScore <= a
         // (2) a < roughScore <= v
         // のどちらかを満たす
-        // Null Window Searchのこの性質が成り立つ理由がわからんけど...
+        // Null Window Searchのこの性質が成り立つ理由がわからんけど... <- わかりましたいずれ証明をQiitaに上げます
         int roughScore = -negascout(cm.o, cm.p, -(a + 1), -a, false);
 
         // roughScore >= max > a なので (2).
@@ -186,45 +191,92 @@ static int negascout(Bitboard p, Bitboard o, int min, int max, bool passed) {
     return bestScore;
 }
 
-int solve(Bitboard p, Bitboard o) {
-    return negascout(p, o, -64, 64, false);
+// 方針としてはまず最善結果を求めておいて、これをもとに途中計算を軽くする.
+void findBestMoves(Bitboard p, Bitboard o, bool passed, int bestScore, std::vector<int>& ans) {
+    Bitboard moves = getMoves(p, o);
+    if (moves == 0ULL) {
+        if (!passed) findBestMoves(o, p, true, -bestScore, ans);
+        return;
+    }
+
+    while (moves) {
+        Bitboard sqbit = moves & -moves; moves ^= sqbit;
+        Bitboard flip = getFlip(p, o, sqbit);
+        Bitboard _p = p ^ flip ^ sqbit;
+        Bitboard _o = o ^ flip;
+        /* alphabetaではmin < v < maxならばvは正確な評価値であることが確定するので、以下のように探索窓を設定しても
+           この手がbestScoreを導く手かどうか分かる */
+        int score = -negascout(_o, _p, -bestScore - 1, -bestScore + 1, false);
+        if (score == bestScore) {
+            ans.push_back(tzcnt(sqbit));
+            p = _p; o = _o;
+            break;
+        }
+    }
+    // なにか値を返すわけではない
+    return findBestMoves(o, p, false, -bestScore, ans);
+}
+
+Solution solve(Bitboard p, Bitboard o) {
+    Solution solution;
+
+    auto start = std::chrono::system_clock::now();
+
+    solution.bestScore = negascout(p, o, -64, 64, false);
+
+    auto end1 = std::chrono::system_clock::now();
+
+    findBestMoves(p, o, false, solution.bestScore, solution.bestMoves);
+
+    auto end2 = std::chrono::system_clock::now();
+
+    solution.scoreLockTime = std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start).count();
+    solution.wholeTime = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start).count();
+
+    return solution;
 }
 
 struct FFO {
-    Color c;
-    Bitboard bits[2];
+    Bitboard p, o;
 
     // X: 黒, O: 白, -: 空白マス
-    FFO(std::string boardText, Color _c) : c(_c), bits{} {
-        Bitboard bit = 1ULL;
+    FFO(std::string boardText, Color color) : p(), o() {
+        Bitboard bit = 1ULL << 63;
         for (char c : boardText) {
-            if (c == 'X') bits[Black] |= bit;
-            else if (c == 'O') bits[White] |= bit;
+            if (c == 'X') p |= bit;
+            else if (c == 'O') o |= bit;
 
-            bit <<= 1;
+            bit >>= 1;
         }
+        if (color == White) std::swap(p, o);
     }
 };
 
 void ffotest() {
-    const FFO boards[] = {
+    const FFO tests[] = {
         { "O--OOOOX-OOOOOOXOOXXOOOXOOXOOOXXOOOOOOXX---OOOOX----O--X--------", Black },
         { "-OOOOO----OOOOX--OOOOOO-XXXXXOO--XXOOX--OOXOXX----OXXO---OOO--O-", Black },
         { "--OOO-------XX-OOOOOOXOO-OOOOXOOX-OOOXXO---OOXOO---OOOXO--OOOO--", Black },
         { "--XXXXX---XXXX---OOOXX---OOXXXX--OOXXXO-OOOOXOO----XOX----XXXXX-", White },
         { "--O-X-O---O-XO-O-OOXXXOOOOOOXXXOOOOOXX--XXOOXO----XXXX-----XXX--", White },
-        //{ "---XXXX-X-XXXO--XXOXOO--XXXOXO--XXOXXO---OXXXOO-O-OOOO------OO--", Black },
-        //{ "---XXX----OOOX----OOOXX--OOOOXXX--OOOOXX--OXOXXX--XXOO---XXXX-O-", Black },
-        { "-OOOOO----OOOO---OOOOX--XXXXXX---OXOOX--OOOXOX----OOXX----XXXX--", White },
+        // { "---XXXX-X-XXXO--XXOXOO--XXXOXO--XXOXXO---OXXXOO-O-OOOO------OO--", Black },
+        // { "---XXX----OOOX----OOOXX--OOOOXXX--OOOOXX--OXOXXX--XXOO---XXXX-O-", Black },
+        // { "-OOOOO----OOOO---OOOOX--XXXXXX---OXOOX--OOOXOX----OOXX----XXXX--", White },
     };
 
-    for (FFO ffo : boards) {
-        auto start = std::chrono::system_clock::now();
-        int result = solve(ffo.bits[ffo.c], ffo.bits[~ffo.c]);
-        auto end = std::chrono::system_clock::now();
+    for (FFO ffo : tests) {
+        Solution solution = solve(ffo.p, ffo.o);
 
-        double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cout << "BestScore:" << solution.bestScore << std::endl
+            << "ScoreLockTime:" << (solution.scoreLockTime / 1000.0) << " sec" << std::endl
+            << "WholeTime:" << (solution.wholeTime / 1000.0) << " sec" << std::endl;
 
-        std::cout << result << ", elapsed:" << elapsed / 1000 << " sec" << std::endl;
+        for (int sq : solution.bestMoves) {
+            int x = sq % 8;
+            int y = sq / 8;
+            std::cout << "HGFEDCBA"[x] << (8 - y);
+        }
+        
+        std::cout << std::endl;
     }
 }
