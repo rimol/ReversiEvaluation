@@ -66,7 +66,26 @@ void generateRecode(int n, int depth, std::string folderPath) {
                 passed = false;
             }
         }
+
         // 残りdepthマスでsolverを使う.
+        Solution solution = solve(recodes[60 - depth].p(), recodes[60 - depth].o());
+        turns = 60 - depth + solution.bestMoves.size();
+        for (int j = 60 - depth + 1; j <= turns; ++j) {
+            Recode current = recodes[j - 1];
+            Bitboard sqbit = 1ULL << solution.bestMoves[j - (60 - depth + 1)];
+            Bitboard flip = getFlip(current.p(), current.o(), sqbit);
+            // パスでない
+            if (flip != 0ULL) {
+                Recode next(current.board[Black], current.board[White], ~current.c, j);
+                next.board[current.c] ^= flip | sqbit;
+                next.board[~current.c] ^= flip;
+                recodes[j] = next;
+            }
+            else {
+                recodes[--j].c = ~current.c;
+                continue;
+            }
+        }
 
         // さっき作ったフォルダ内に保存していく
         int result = popcount(recodes[turns].board[Black]) - popcount(recodes[turns].board[White]);
