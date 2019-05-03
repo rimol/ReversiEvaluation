@@ -9,5 +9,5 @@ struct Solution {
 };
 
 // pからみた最終石差を計算
-Solution solve(Bitboard p, Bitboard o, std::vector<int>& ans);
+Solution solve(Bitboard p, Bitboard o);
 void ffotest();
