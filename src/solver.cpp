@@ -4,6 +4,7 @@
 #include <vector>
 #include "bitboard.h"
 #include "solver.h"
+#include "reversi.h"
 
 // v = ミニマックス値
 
@@ -272,9 +273,7 @@ void ffotest() {
             << "WholeTime:" << (solution.wholeTime / 1000.0) << " sec" << std::endl;
 
         for (int sq : solution.bestMoves) {
-            int x = sq % 8;
-            int y = sq / 8;
-            std::cout << "HGFEDCBA"[x] << (8 - y);
+            std::cout << convertToLegibleSQ(sq) << ' ';
         }
         
         std::cout << std::endl;

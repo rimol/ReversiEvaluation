@@ -512,12 +512,5 @@ inline int extract(Bitboard p, Bitboard o, int f) {
     return convert(pext(p, features[f].mask), pext(o, features[f].mask));
 }
 
-// 評価関数で使うフォルダの指定
-extern std::string evalValuesFolderPath;
-extern double evaluationValues[FeatureNum][6561];
-extern double mobilityWeight;
-extern double intercept;
-
-// 盤上にt + 4コ石がある盤面を評価するデータに変更する
-void changeEvaluationTables(int t);
+void loadEvalValues(std::string evalValuesFolderPath);
 double evaluate(Bitboard p, Bitboard o);

@@ -1,15 +1,17 @@
 #include "eval.h"
 #include "engine.h"
 
-double alphabeta(Bitboard p, Bitboard o, double min, double max, int depth) {
+double alphabeta(Bitboard p, Bitboard o, double min, double max, bool passed, int depth) {
     if (depth == 0) return evaluate(p, o);
 
     Bitboard moves = getMoves(p, o);
+    if (moves == 0ULL) return passed ? evaluate(p, o) : -alphabeta(o, p, -max, -min, true, depth);
+    
     while (moves) {
         Bitboard sqbit = moves & -moves;
         Bitboard flip = getFlip(p, o, sqbit);
 
-        double score = -alphabeta(o ^ flip, p ^ flip ^ sqbit, -max, -min, depth - 1);
+        double score = -alphabeta(o ^ flip, p ^ flip ^ sqbit, -max, -min, false, depth - 1);
         if (score >= max) return score;
 
         min = std::max(score, min);
@@ -20,11 +22,7 @@ double alphabeta(Bitboard p, Bitboard o, double min, double max, int depth) {
 }
 
 int chooseBestMove(Bitboard p, Bitboard o, int depth) {
-    // 下で呼ぶ評価関数で使う評価値を読み込む
-    int stoneCount = popcount(p | o);
-    changeEvaluationTables(stoneCount - 4 + depth);
-
-    double bestScore = -10e9+7;
+    double bestScore = -10e9-7;
     int sq = -1;
 
     Bitboard moves = getMoves(p, o);
@@ -32,7 +30,7 @@ int chooseBestMove(Bitboard p, Bitboard o, int depth) {
         Bitboard sqbit = moves & -moves;
         Bitboard flip = getFlip(p, o, sqbit);
 
-        double score = -alphabeta(o ^ flip, p ^ flip ^ sqbit, -10e9+7, -bestScore, depth - 2);
+        double score = -alphabeta(o ^ flip, p ^ flip ^ sqbit, -10e9-7, -bestScore, false, depth - 1);
         if (score > bestScore) {
             bestScore = score;
             sq = tzcnt(sqbit);

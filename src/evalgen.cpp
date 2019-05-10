@@ -11,10 +11,14 @@
 #include "eval.h"
 #include "evalgen.h"
 
+static double evaluationValues[FeatureNum][6561];
+static double mobilityWeight;
+static double intercept;
+
 // 更新分の保存用
 static double valDiff[FeatureNum][6561];
-static double mobDiff = 0.0;
-static double interceptDiff = 0.0;
+static double mobDiff;
+static double interceptDiff;
 
 // 使う棋譜中で各特徴が出現する回数
 // ステップサイズを決めるのに使う
@@ -66,7 +70,7 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
         double currentVariance = squaredDeviationSum / (double)M;
         // 終了条件わからん
         // 「前回との差がピッタリ0」を条件にすると終わらない
-        if (std::abs(previousVariance - currentVariance) < 10e-4) {
+        if (std::abs(previousVariance - currentVariance) < 10e-6) {
             std::cout << "Done. variance: " << currentVariance << ", loop: " << loopCounter << " times" << std::endl;
             return currentVariance;
         }
@@ -103,7 +107,7 @@ void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFo
     std::ofstream vofs((outputFolderPath + "variance.txt").c_str());
 
     // (1-60).binについてそれぞれ計算→保存
-    for (int i = 21; i >= 13; --i) {
+    for (int i = 60; i >= 1; --i) {
         // ファイルパスを渡して計算させる
         double variance = calculateEvaluationValue(recodesFolderPath + std::to_string(i) + ".bin", beta);
         // 保存～

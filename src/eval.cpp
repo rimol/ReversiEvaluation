@@ -5,29 +5,25 @@
 #include "bitboard.h"
 #include "eval.h"
 
-std::string evalValuesFolderPath = "";
+static double evaluationValues[60][FeatureNum][6561];
+static double mobilityWeight[60];
+static double intercept[60];
 
-// 評価値生成のときも使うのでグローバルにしています。
-double evaluationValues[FeatureNum][6561];
-double mobilityWeight = 0.0;
-double intercept = 0.0;
-
-void changeEvaluationTables(int t) {
-    std::stringstream ss;
-    ss << evalValuesFolderPath;
-    if (evalValuesFolderPath.back() != '\\') ss << '\\';
-    ss << t << ".bin";
-
-    std::ifstream ifs(ss.str(), std::ios::binary);
-    ifs.read((char*)evaluationValues, sizeof(double) * FeatureNum * 6561);
-    ifs.read((char*)&mobilityWeight, sizeof(double));
-    ifs.read((char*)&intercept, sizeof(double));
+void loadEvalValues(std::string evalValuesFolderPath) {
+    if (evalValuesFolderPath.back() != '\\') evalValuesFolderPath += '\\';
+    for (int i = 0; i < 60; ++i) {
+        std::ifstream ifs(evalValuesFolderPath + std::to_string(i) + ".bin", std::ios::binary);
+        ifs.read((char*)evaluationValues[i], sizeof(double) * FeatureNum * 6561);
+        ifs.read((char*)&mobilityWeight[i], sizeof(double));
+        ifs.read((char*)&intercept[i], sizeof(double));
+    }
 }
 
 double evaluate(Bitboard p, Bitboard o) {
-    double e = intercept;
+    int t = popcount(p | o) - 4 - 1;
+    double e = intercept[t];
     for (int i = 0; i < FeatureNum; ++i) {
-        e += evaluationValues[i][extract(p, o, i)];
+        e += evaluationValues[t][i][extract(p, o, i)];
     }
-    return e + (double)getMobility(p, o) * mobilityWeight;
+    return e + (double)getMobility(p, o) * mobilityWeight[t];
 }

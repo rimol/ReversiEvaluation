@@ -1,5 +1,7 @@
 #include <random>
 #include "bitboard.h"
+#include "engine.h"
+#include "reversi.h"
 
 void testBitboardOperation() {
     // テスト回数
@@ -39,4 +41,31 @@ void testBitboardOperation() {
     }
 
     std::cout << diff_getmoves << std::endl << diff_getflip << std::endl;
+}
+
+// ランダムAI VS engineの自動対戦
+void play(int N, int depth) {
+    std::random_device rnd;
+    std::mt19937 mt(rnd());
+
+    int wins = 0;
+
+    for (int i = 0; i < N; ++i) {
+        Color randomPlayer = (Color)(mt() & 1);
+        Reversi reversi;
+        while (!reversi.isFinished) {
+            int sq;
+            if (reversi.c == randomPlayer) {
+                sq = chooseRandomMove(reversi.p, reversi. o, mt);
+            }
+            else {
+                sq = chooseBestMove(reversi.p, reversi. o, depth);
+            }
+            reversi.move(sq);
+        }
+
+        if (reversi.winner() == ~randomPlayer) ++wins;
+    }
+
+    std::cout << "Win rate:" << ((double)wins / (double)N * 100) << "%" << std::endl;
 }

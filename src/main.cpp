@@ -6,7 +6,9 @@
 #include "evalgen.h"
 #include "engine.h"
 #include "recgen.h"
+#include "reversi.h"
 #include "solver.h"
+#include "test.h"
 
 void doReversi() {
 	int AlphabetToNumber[1 << 8];
@@ -19,8 +21,10 @@ void doReversi() {
 	AlphabetToNumber['g'] = 1;
 	AlphabetToNumber['h'] = 0;
 
+	Reversi reversi;
 	Color human;
 	int depth;
+	std::string evalValuesFolderPath;
 	std::cout << "Choose your stone color from black(0) or white(1):";
 	std::cin >> human;
 	std::cout << "Enter the search depth:";
@@ -28,63 +32,31 @@ void doReversi() {
 	std::cout << "Enter a folder path that includes eval files:";
 	std::cin >> evalValuesFolderPath;
 
-	bool passed = false;
-	Color current = Black;
-	Bitboard p = 0x0000000810000000ULL;
-	Bitboard o = 0x0000001008000000ULL;
-	while (true) {
-		Bitboard moves = getMoves(p, o);
-		if (moves == 0ULL) {
-			if (passed) {
-				std::cout << "The game is over." << std::endl;
-				break;
-			}
-			else {
-				std::cout << "Pass" << std::endl;
-				passed = true;
-			}
-		}
-		else {
-			// 盤面を表示する
-			std::cout << " ABCDEFGH" << std::endl;
-			for (int i = 63; i >= 0; --i) {
-				if (i % 8 == 7) std::cout << (8 - i / 8);
+	loadEvalValues(evalValuesFolderPath);
 
-        		if (p >> i & 1ULL) {
-            		std::cout << (current == Black ? 'X' : 'O');
-        		}
-        		else if (o >> i & 1ULL) {
-            		std::cout << (current == Black ? 'O' : 'X');
-        		}
-        		else if (moves >> i & 1ULL) {
-            		std::cout << "*";
-        		}
-				else {
-            		std::cout << "-";
-				}
+	while(!reversi.isFinished) {
+		reversi.print();
 
-        		if (i % 8 == 0) std::cout << std::endl;
-    		}
-			std::cout << "p:" << (current == Black ? "Black " : "White ") << "p: " << popcount(p) << " o: " << popcount(o) << std::endl;
-
-			// 入力を待つ
+		bool moved = false;
+		while (!moved) {
 			int sq;
-			if (current == human) {
+			if (reversi.c == human) {
 				std::string pos;
 				std::cin >> pos;
 				sq = AlphabetToNumber[pos[0]] + (7 - (pos[1] - '1')) * 8;
 			}
-			else sq = chooseBestMove(p, o, depth);
+			else {
+				sq = chooseBestMove(reversi.p, reversi.o, depth);
+				// コンピュータが選択した手を表示する
+				std::cout << convertToLegibleSQ(sq) << std::endl;
+			}
 
-			Bitboard sqbit = 1ULL << sq;
-			Bitboard flip = getFlip(p, o, sqbit);
-			p ^= flip | sqbit;
-			o ^= flip;
+			moved = reversi.move(sq);
+			if (!moved) std::cout << "the selected move is a illegal move. select again:";
 		}
-
-		std::swap(p, o);
-		current = ~current;
 	}
+
+	std::cout << "The game is over." << std::endl;
 }
 
 void doRecGen() {
@@ -117,6 +89,22 @@ void doEvalGen() {
 	std::cout << "Done!" << std::endl;
 }
 
+void doAutoPlay() {
+	int N;
+	int depth;
+	std::string evalValuesFolderPath;
+	std::cout << "Enter the number of plays you want to make:";
+	std::cin >> N;
+	std::cout << "Enter the search depth:";
+	std::cin >> depth;
+	std::cout << "Enter a folder path that includes eval files:";
+	std::cin >> evalValuesFolderPath;
+
+	loadEvalValues(evalValuesFolderPath);
+
+	play(N, depth);
+}
+
 int main() {
 	while (true) {
 		std::cout << "Enter a command:";
@@ -127,6 +115,7 @@ int main() {
 		else if (command == "recgen") doRecGen();
 		else if (command == "evalgen") doEvalGen();
 		else if (command == "ffo") ffotest();
+		else if (command == "autoplay") doAutoPlay();
  		else if (command == "exit") break; 
 	}
 

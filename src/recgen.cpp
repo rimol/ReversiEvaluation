@@ -11,6 +11,19 @@
 #include "recode.h"
 #include "solver.h"
 
+// 棋譜が正しく生成されているかチェックする
+/*
+    チェックポイント:
+    * 石の数
+    * 
+*/
+// static bool isValidRecodes(const Recode* recodes, int turns) {
+//     for (int i = 0; i < turns; ++i) {
+//         int stoneCount = popcount(recodes[i].p() | recodes[i].o());
+//         if (stoneCount != i + 4) return false;
+//     }
+// }
+
 void generateRecode(int n, int depth, std::string folderPath) {
     // 指定されたフォルダに保存用フォルダを作成
     // フォルダ名は現在時刻
