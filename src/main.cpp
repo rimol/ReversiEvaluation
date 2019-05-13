@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include "bitboard.h"
@@ -24,7 +25,7 @@ void doReversi() {
 	Reversi reversi;
 	Color human;
 	int depth;
-	std::string evalValuesFolderPath;
+	std::filesystem::path evalValuesFolderPath;
 	std::cout << "Choose your stone color from black(0) or white(1):";
 	std::cin >> human;
 	std::cout << "Enter the search depth:";
@@ -61,7 +62,7 @@ void doReversi() {
 
 void doRecGen() {
 	int n, depth;
-	std::string folderPath;
+	std::filesystem::path folderPath;
 	std::cout << "Specify the number of recodes you want to generate:";
 	std::cin >> n;
 	std::cout << "Specify a depth of the exact play:";
@@ -75,7 +76,7 @@ void doRecGen() {
 }
 
 void doEvalGen() {
-	std::string recodesFolderPath, outputFolderPath;
+	std::filesystem::path recodesFolderPath, outputFolderPath;
 	double beta;
 	std::cout << "Enter a folder path where recodes are stored:";
 	std::cin >> recodesFolderPath;
@@ -92,7 +93,7 @@ void doEvalGen() {
 void doAutoPlay() {
 	int N;
 	int depth;
-	std::string evalValuesFolderPath;
+	std::filesystem::path evalValuesFolderPath;
 	std::cout << "Enter the number of plays you want to make:";
 	std::cin >> N;
 	std::cout << "Enter the search depth:";

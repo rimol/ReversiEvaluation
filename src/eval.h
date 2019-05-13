@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 #include "bitboard.h"
 
@@ -512,5 +513,5 @@ inline int extract(Bitboard p, Bitboard o, int f) {
     return convert(pext(p, features[f].mask), pext(o, features[f].mask));
 }
 
-void loadEvalValues(std::string evalValuesFolderPath);
+void loadEvalValues(std::filesystem::path evalValuesFolderPath);
 double evaluate(Bitboard p, Bitboard o);

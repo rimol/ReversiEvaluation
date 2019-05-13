@@ -1,5 +1,5 @@
-#include <direct.h>
 #include <fstream>
+#include <filesystem>
 #include <random>
 #include <sstream>
 #include <string>
@@ -24,18 +24,17 @@
 //     }
 // }
 
-void generateRecode(int n, int depth, std::string folderPath) {
+void generateRecode(int n, int depth, std::filesystem::path folderPath) {
     // 指定されたフォルダに保存用フォルダを作成
     // フォルダ名は現在時刻
-    if (folderPath.back() != '\\') folderPath += '\\';
-    folderPath += std::to_string(time(NULL)) + '\\';
+    folderPath /= std::to_string(time(NULL));
 
     // フォルダ作成
-    mkdir(folderPath.c_str());
+    std::filesystem::create_directory(folderPath);
 
     std::ofstream ofss[60];
     for (int i = 0; i < 60; ++i) {
-        ofss[i] = std::ofstream(folderPath + std::to_string(i + 1) + ".bin", std::ios::binary);
+        ofss[i] = std::ofstream(folderPath / (std::to_string(i + 1) + ".bin"), std::ios::binary);
     }
 
     std::random_device rnd; // 非決定的乱数生成器、これでメルセンヌ・ツイスタのシードを設定

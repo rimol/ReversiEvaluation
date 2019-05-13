@@ -3,8 +3,8 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include <sstream>
-#include <direct.h>
 #include <time.h>
 #include "bitboard.h"
 #include "recode.h"
@@ -95,24 +95,21 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
     }
 }
 
-void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFolderPath, double beta) {
-    // 正しいフォルダ以外が指定されたときのことはめんどくさいので考えません
-    if (recodesFolderPath.back() != '\\') recodesFolderPath += '\\';
-    if (outputFolderPath.back() != '\\') outputFolderPath += '\\';
-    outputFolderPath += std::to_string(time(NULL)) + "\\";
+void generateEvaluationFiles(std::filesystem::path recodesFolderPath, std::filesystem::path outputFolderPath, double beta) {
+    outputFolderPath /= std::to_string(time(NULL));
     // フォルダ作成
-    mkdir(outputFolderPath.c_str());
+    std::filesystem::create_directory(outputFolderPath);
 
     // 分散を保存するファイルを作る
-    std::ofstream vofs((outputFolderPath + "variance.txt").c_str());
+    std::ofstream vofs((outputFolderPath / "variance.txt").string());
 
     // (1-60).binについてそれぞれ計算→保存
     for (int i = 60; i >= 1; --i) {
         // ファイルパスを渡して計算させる
-        double variance = calculateEvaluationValue(recodesFolderPath + std::to_string(i) + ".bin", beta);
+        double variance = calculateEvaluationValue(recodesFolderPath / (std::to_string(i) + ".bin"), beta);
         // 保存～
         vofs << i << ".bin: " << variance << std::endl;
-        std::ofstream ofs(outputFolderPath + std::to_string(i) + ".bin", std::ios::binary);
+        std::ofstream ofs(outputFolderPath / (std::to_string(i) + ".bin"), std::ios::binary);
         ofs.write((char*)evaluationValues, sizeof(double) * FeatureNum * 6561);
         ofs.write((char*)&mobilityWeight, sizeof(double));
         ofs.write((char*)&intercept, sizeof(double));
