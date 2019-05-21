@@ -6,20 +6,31 @@
 #include "solver.h"
 #include "reversi.h"
 
+static long long nodeCount = 0L;
+
 // v = ミニマックス値
 
 // negamaxかいて. <- 要はpからみた石差の最大値を返す
 // min < v < max
 static int negamax(Bitboard p, Bitboard o, int min, int max, bool passed) {
+    ++nodeCount;
+
     if (popcount(p | o) == 63) {
         Bitboard flip = getFlip(p, o, ~(p | o));
 
         if (flip != 0ULL) {
+            ++nodeCount;
             return popcount(p) - popcount(o) + (popcount(flip) << 1) + 1;
         }
         else {
             flip = getFlip(o, p, ~(p | o));
-            return popcount(p) - popcount(o) - (popcount(flip) << 1) - (flip != 0ULL);
+            if (flip != 0ULL) {
+                ++nodeCount;
+                return popcount(p) - popcount(o) - (popcount(flip) << 1) - 1;
+            }
+            else {
+                return popcount(p) - popcount(o);
+            }
         }
     }
 
@@ -27,7 +38,7 @@ static int negamax(Bitboard p, Bitboard o, int min, int max, bool passed) {
 
     // パスの処理
     if (moves == 0ULL)
-        return passed ? (popcount(p) - popcount(o)) : -negamax(o, p, -max, -min, true);
+        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negamax(o, p, -max, -min, true));
 
     // 打てるところがあるとき
     
@@ -85,10 +96,12 @@ static int inline getIndex(Bitboard p, Bitboard o) {
 static int negascout(Bitboard p, Bitboard o, int min, int max, bool passed) {
     if (popcount(p | o) >= 58) return negamax(p, o, min, max, passed);
 
+    ++nodeCount;
+
     Bitboard moves = getMoves(p, o);
     // パス
     if (moves == 0ULL)
-        return passed ? (popcount(p) - popcount(o)) : -negascout(o, p, -max, -min, true);
+        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negascout(o, p, -max, -min, true));
 
     // テーブルから前の探索結果を取り出し、vの範囲を狭めて効率化を図る.
     const int index = getIndex(p, o);
@@ -220,12 +233,14 @@ void findBestMoves(Bitboard p, Bitboard o, bool passed, int bestScore, std::vect
 
 Solution solve(Bitboard p, Bitboard o) {
     Solution solution;
+    nodeCount = 0;
 
     auto start = std::chrono::system_clock::now();
 
     solution.bestScore = negascout(p, o, -64, 64, false);
 
     auto end1 = std::chrono::system_clock::now();
+    solution.nodeCount = nodeCount;
 
     findBestMoves(p, o, false, solution.bestScore, solution.bestMoves);
 
@@ -270,7 +285,8 @@ void ffotest() {
 
         std::cout << "BestScore:" << solution.bestScore << std::endl
             << "ScoreLockTime:" << (solution.scoreLockTime / 1000.0) << " sec" << std::endl
-            << "WholeTime:" << (solution.wholeTime / 1000.0) << " sec" << std::endl;
+            << "WholeTime:" << (solution.wholeTime / 1000.0) << " sec" << std::endl
+            << "NPS:" << solution.NPS() << std::endl;
 
         for (int sq : solution.bestMoves) {
             std::cout << convertToLegibleSQ(sq) << ' ';
