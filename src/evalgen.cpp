@@ -24,6 +24,14 @@ static double interceptDiff;
 // ステップサイズを決めるのに使う
 static int featureFrequency[FeatureNum][6561];
 
+static double evaluateWithCurrentWeight(Bitboard p, Bitboard o) {
+    double e = intercept;
+    for (int i = 0; i < FeatureNum; ++i) {
+        e += evaluationValues[i][extract(p, o, i)];
+    }
+    return e + (double)getMobility(p, o) * mobilityWeight;
+}
+
 // 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
 static double calculateEvaluationValue(std::string recodeFilePath, double beta) {
     // 配列の初期化（0埋め）
@@ -33,6 +41,11 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
 
     // ファイルを何回も読むのは無駄なので最初に全部読み込む
     std::ifstream ifs(recodeFilePath, std::ios::ate | std::ios::binary);
+    if (!ifs.is_open()) {
+        std::cout << "Can't open the file: " << recodeFilePath << std::endl;
+        return -1.0;
+    }
+
     // ファイルに入っている局面の数
     const int M = ifs.tellg() / sizeof(Recode);
     std::vector<Recode> recodes(M);
@@ -55,7 +68,7 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
         double squaredDeviationSum = 0;
         for (Recode recode : recodes) {
             // 残差
-            double r = ((double)recode.result - evaluate(recode.p(), recode.o()));
+            double r = ((double)recode.result - evaluateWithCurrentWeight(recode.p(), recode.o()));
             squaredDeviationSum += r * r;
             // このデータで出現する各特徴に対し更新分を加算していく
             for (int i = 0; i < FeatureNum; ++i) {
@@ -104,12 +117,12 @@ void generateEvaluationFiles(std::filesystem::path recodesFolderPath, std::files
     std::ofstream vofs((outputFolderPath / "variance.txt").string());
 
     // (1-60).binについてそれぞれ計算→保存
-    for (int i = 60; i >= 1; --i) {
+    for (int i = 18; i >= 1; --i) {
         // ファイルパスを渡して計算させる
-        double variance = calculateEvaluationValue(recodesFolderPath / (std::to_string(i) + ".bin"), beta);
+        double variance = calculateEvaluationValue((recodesFolderPath / (std::to_string(i) + ".bin")).string(), beta);
         // 保存～
         vofs << i << ".bin: " << variance << std::endl;
-        std::ofstream ofs(outputFolderPath / (std::to_string(i) + ".bin"), std::ios::binary);
+        std::ofstream ofs((outputFolderPath / (std::to_string(i) + ".bin")).string(), std::ios::binary);
         ofs.write((char*)evaluationValues, sizeof(double) * FeatureNum * 6561);
         ofs.write((char*)&mobilityWeight, sizeof(double));
         ofs.write((char*)&intercept, sizeof(double));
