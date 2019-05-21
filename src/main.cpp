@@ -10,6 +10,7 @@
 #include "reversi.h"
 #include "solver.h"
 #include "test.h"
+#include "thor.h"
 
 void doReversi() {
 	int AlphabetToNumber[1 << 8];
@@ -106,6 +107,22 @@ void doAutoPlay() {
 	play(N, depth);
 }
 
+void doThorConversion() {
+	int N;
+	std::cout << "Enter the number of thor database files:";
+	std::cin >> N;
+	std::cout << "Enter each file path:";
+	std::vector<std::filesystem::path> paths(N);
+	for (int i = 0; i < N; ++i) {
+		std::cin >> paths[i];
+	}
+	std::filesystem::path output;
+	std::cout << "Enter a output folder path:";
+	std::cin >> output;
+
+	convertThorDatabaseToRecodeFiles(paths, output);
+}
+
 int main() {
 	while (true) {
 		std::cout << "Enter a command:";
@@ -117,7 +134,8 @@ int main() {
 		else if (command == "evalgen") doEvalGen();
 		else if (command == "ffo") ffotest();
 		else if (command == "autoplay") doAutoPlay();
- 		else if (command == "exit") break; 
+		else if (command == "thorconv") doThorConversion();
+  		else if (command == "exit") break; 
 	}
 
 	return 0;
