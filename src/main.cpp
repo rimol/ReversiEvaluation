@@ -121,6 +121,8 @@ void doThorConversion() {
 	std::cin >> output;
 
 	convertThorDatabaseToRecodeFiles(paths, output);
+
+	std::cout << "Done!" << std::endl;
 }
 
 int main() {

@@ -117,7 +117,7 @@ void generateEvaluationFiles(std::filesystem::path recodesFolderPath, std::files
     std::ofstream vofs((outputFolderPath / "variance.txt").string());
 
     // (1-60).binについてそれぞれ計算→保存
-    for (int i = 18; i >= 1; --i) {
+    for (int i = 60; i >= 1; --i) {
         // ファイルパスを渡して計算させる
         double variance = calculateEvaluationValue((recodesFolderPath / (std::to_string(i) + ".bin")).string(), beta);
         // 保存～

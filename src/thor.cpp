@@ -9,6 +9,8 @@ void convertThorDatabaseToRecodeFiles(const std::vector<std::filesystem::path> &
         ofss[i] = std::ofstream(outputFolderPath / (std::to_string(i + 1) + ".bin"), std::ios::binary);
     }
 
+    int totalRecodeNum = 0;
+
     for (auto path : thorDatabasePaths) {
         std::ifstream ifs(path.string(), std::ios::ate | std::ios::binary);
         if (!ifs) {
@@ -18,6 +20,7 @@ void convertThorDatabaseToRecodeFiles(const std::vector<std::filesystem::path> &
         // databaseに入っている試合数を割り出す
         const int M = ((int)ifs.tellg() - 16) / sizeof(Thor);
         std::vector<Thor> database(M);
+        totalRecodeNum += M;
         // ヘッダーの16バイトを飛ばす
         ifs.seekg(16);
         ifs.read((char*)&database[0], M * sizeof(Thor));
@@ -26,12 +29,18 @@ void convertThorDatabaseToRecodeFiles(const std::vector<std::filesystem::path> &
             int result = thor.blackStoneCount - (64 - thor.blackStoneCount);
             Reversi reversi;
             for (int i = 0; !reversi.isFinished; ++i) {
+                // このソフトでの形式に変換
                 int move = thor.moves[i];
                 int x = 8 - move % 10;
                 int y = 8 - move / 10;
-                // 僕のソフトでの形式に変換
                 int sq = x + y * 8;
-                reversi.move(sq);
+                bool success = reversi.move(sq);
+                if (!success) {
+                    std::cout << "an illegal move is detected: " << sq << std::endl;
+                    reversi.print();
+                    break;
+                } 
+
                 Recode recode(reversi.p, reversi.o, reversi.c, i + 1);
                 if (reversi.c == White) {
                     std::swap(recode.board[Black], recode.board[White]);
@@ -45,4 +54,6 @@ void convertThorDatabaseToRecodeFiles(const std::vector<std::filesystem::path> &
             }
         }
     }
+
+    std::cout << "Total: " << totalRecodeNum << " recodes were converted!" << std::endl;
 }
