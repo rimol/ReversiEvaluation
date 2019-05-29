@@ -2,18 +2,21 @@
 #include "bitboard.h"
 
 struct Recode {
-    Bitboard board[2];
-    Color c;
-    // 何手目の盤面か
-    int turn;
-    // 最終石差(cの石の数-~cの石の数)
+    Bitboard p, o;
     int result;
 
-    Bitboard p() const { return board[c]; }
-    Bitboard o() const { return board[~c]; }
-
     Recode() {}
+    Recode(Bitboard p, Bitboard o, int result) : p(p), o(o), result(result) {}
+};
 
-    Recode(Bitboard b, Bitboard w, Color _c, int _turn)
-        : board{b, w}, c(_c), turn(_turn), result() {}
+// 回転したビットボードもあらかじめ持つ
+struct RecodeEx{
+    Bitboard p_r[4];
+    Bitboard o_r[4];
+    int result;
+
+    RecodeEx(Recode recode)
+        : p_r{ recode.p, rotateRightBy90(recode.p), rotateBy180(recode.p), rotateRightBy90(rotateBy180(recode.p)) },
+          o_r{ recode.o, rotateRightBy90(recode.o), rotateBy180(recode.o), rotateRightBy90(rotateBy180(recode.o)) },
+          result(recode.result) {}
 };

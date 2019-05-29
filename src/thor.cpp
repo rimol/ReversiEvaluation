@@ -41,13 +41,11 @@ void convertThorDatabaseToRecodeFiles(const std::vector<std::filesystem::path> &
                     break;
                 } 
 
-                Recode recode(reversi.p, reversi.o, reversi.c, i + 1);
+                Recode recode(reversi.p, reversi.o, result);
+
+                // 黒目線なので必要があればひっくり返す。
                 if (reversi.c == White) {
-                    std::swap(recode.board[Black], recode.board[White]);
-                    recode.result = -result;
-                }
-                else {
-                    recode.result = result;
+                    recode.result *= -1;
                 }
 
                 ofss[i].write((char*)&recode, sizeof(Recode));
