@@ -57,16 +57,26 @@ inline Bitboard pext(Bitboard x, Bitboard mask) {
 }
 
 // コピペ
-inline Bitboard delta_swap(Bitboard x, Bitboard mask, int delta) {
+constexpr Bitboard delta_swap(Bitboard x, Bitboard mask, int delta) {
     // ペアのxor
     Bitboard t = (x ^ (x >> delta)) & mask;
     // これを使えば簡単にswapできる
     return t ^ (t << delta) ^ x;
 }
 
+// ビット列を逆転する。 ex) 1010 -> 0101
+constexpr Bitboard rotateBy180(Bitboard x) {
+    x = (x >> 32) | (x << 32);
+    x = (x >> 16 & 0x0000ffff0000ffffULL) | (x << 16 & 0xffff0000ffff0000ULL);
+    x = (x >> 8 & 0x00ff00ff00ff00ffULL) | (x << 8 & 0xff00ff00ff00ff00ULL);
+    x = (x >> 4 & 0x0f0f0f0f0f0f0f0fULL) | (x << 4 & 0xf0f0f0f0f0f0f0f0ULL);
+    x = (x >> 2 & 0x3333333333333333ULL) | (x << 2 & 0xccccccccccccccccULL);
+    return (x >> 1 & 0x5555555555555555ULL) | (x << 1 & 0xaaaaaaaaaaaaaaaaULL);
+} 
+
 // ビットボードを右に90°回転させる.
 // 対角線A8H1を軸に盤面を反転させて、1, 2, 3, ..., 8列を反転させて8, 7, 6, ..., 1列にすればよい
-inline Bitboard rotateRightBy90(Bitboard x) {
+constexpr Bitboard rotateRightBy90(Bitboard x) {
     /*
     0x000000000f0f0f0f = 
     0000 0000
