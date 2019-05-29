@@ -15,6 +15,8 @@ struct RecodeEx{
     Bitboard o_r[4];
     int result;
 
+    RecodeEx() {}
+
     RecodeEx(Recode recode)
         : p_r{ recode.p, rotateRightBy90(recode.p), rotateBy180(recode.p), rotateRightBy90(rotateBy180(recode.p)) },
           o_r{ recode.o, rotateRightBy90(recode.o), rotateBy180(recode.o), rotateRightBy90(rotateBy180(recode.o)) },

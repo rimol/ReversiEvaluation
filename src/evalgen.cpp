@@ -42,7 +42,7 @@ static double evaluateWithCurrentWeight(const RecodeEx& recodeEx) {
 static double calculateEvaluationValue(std::string recodeFilePath, double beta) {
     // 配列の初期化（0埋め）
     std::fill((double*)evaluationValues, (double*)(evaluationValues + GroupNum), 0);
-    std::fill((double*)featureFrequency, (double*)(featureFrequency + GroupNum), 0);
+    std::fill((int*)featureFrequency, (int*)(featureFrequency + GroupNum), 0);
     mobilityWeight = mobDiff = intercept = interceptDiff = 0.0;
 
     // ファイルを何回も読むのは無駄なので最初に全部読み込む
