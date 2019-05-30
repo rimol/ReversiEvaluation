@@ -11,18 +11,18 @@
 #include "eval.h"
 #include "evalgen.h"
 
-static double evaluationValues[GroupNum][6561];
+static double evaluationValues[GroupNum][EvalArrayLength];
 static double mobilityWeight;
 static double intercept;
 
 // 更新分の保存用
-static double valDiff[GroupNum][6561];
+static double valDiff[GroupNum][EvalArrayLength];
 static double mobDiff;
 static double interceptDiff;
 
 // 使う棋譜中で各特徴が出現する回数
 // ステップサイズを決めるのに使う
-static int featureFrequency[GroupNum][6561];
+static int featureFrequency[GroupNum][EvalArrayLength];
 
 static double evaluateWithCurrentWeight(const RecodeEx& recodeEx) {
     int t = popcount(recodeEx.p_r[0] | recodeEx.o_r[0]) - 4 - 1;
@@ -110,7 +110,7 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
 
         // update
         for (int i = 0; i < GroupNum; ++i) {
-            for (int j = 0; j < 6561; ++j) {
+            for (int j = 0; j < EvalArrayLength; ++j) {
                 evaluationValues[i][j] += valDiff[i][j] * std::min(beta / 50.0, beta / (double)featureFrequency[i][j]);
                 valDiff[i][j] = 0.0;
             }
@@ -141,7 +141,7 @@ void generateEvaluationFiles(std::filesystem::path recodesFolderPath, std::files
         // 保存～
         vofs << i << ".bin: " << variance << std::endl;
         std::ofstream ofs((outputFolderPath / (std::to_string(i) + ".bin")).string(), std::ios::binary);
-        ofs.write((char*)evaluationValues, sizeof(double) * FeatureNum * 6561);
+        ofs.write((char*)evaluationValues, sizeof(double) * GroupNum * EvalArrayLength);
         ofs.write((char*)&mobilityWeight, sizeof(double));
         ofs.write((char*)&intercept, sizeof(double));
     }

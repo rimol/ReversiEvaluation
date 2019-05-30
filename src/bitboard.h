@@ -28,7 +28,7 @@ typedef unsigned long long Bitboard;
 */
 
 // 立っているビットの数を数える
-inline Bitboard popcount(Bitboard x) {
+constexpr Bitboard popcount(Bitboard x) {
     // x -= (x >> 1) & 0x5555555555555555ULL;
     // x = (x & 0x3333333333333333ULL) + ((x >> 2) & 0x3333333333333333ULL);
     // x = (x & 0x0f0f0f0f0f0f0f0fULL) + ((x >> 4) & 0x0f0f0f0f0f0f0f0fULL);
@@ -46,7 +46,7 @@ inline Bitboard pext(Bitboard x, Bitboard mask) {
     /*
     maskで立っているビットの数は8に限定しています
     Bitboard extracted = 0ULL;
-    for (Bitboard i = 1ULL; i < 256ULL; i <<= 1) {
+    for (Bitboard i = 1ULL; i < (1ULL << MaxFocusedSquareCount); i <<= 1) {
         Bitboard lb = mask & -mask;
         if (x & lb) extracted |= i;
         mask ^= lb;

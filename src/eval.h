@@ -5,6 +5,17 @@
 #include <string>
 #include "bitboard.h"
 
+// 一つの特徴で何個のマスまでデータをもつか指定しておく
+constexpr int MaxFocusedSquareCount = 10;
+
+constexpr int integerPow(int x, int n) {
+    if (n == 1) return x;
+    return n & 1 ? x * integerPow(x * x, n / 2) : integerPow(x * x, n / 2);
+}
+
+// もったいないけどこれで固定しておく
+constexpr int EvalArrayLength = integerPow(3, MaxFocusedSquareCount);
+
 /*
 書式:
 改行
@@ -13,10 +24,10 @@
 */
 constexpr char FeatureDefinitions[] = 
 R"(
-######## ........ ........ ........ ###..... .......# ......#. .....#.. ....#... ...#.... ...#....
-........ ######## ........ ........ ###..... ......#. .....#.. ....#... ...#.... ..#..... ...#....
-........ ........ ######## ........ ##...... .....#.. ....#... ...#.... ..#..... .#...... ..##....
-........ ........ ........ ######## ........ ....#... ...#.... ..#..... .#...... #....... ####....
+######## ........ ........ ........ ###..... .......# ......#. .....#.. ....#... ...#.... #####...
+.#....#. ######## ........ ........ ###..... ......#. .....#.. ....#... ...#.... ..#..... #####...
+........ ........ ######## ........ ###..... .....#.. ....#... ...#.... ..#..... .#...... ........
+........ ........ ........ ######## ........ ....#... ...#.... ..#..... .#...... #....... ........
 ........ ........ ........ ........ ........ ...#.... ..#..... .#...... #....... ........ ........
 ........ ........ ........ ........ ........ ..#..... .#...... #....... ........ ........ ........
 ........ ........ ........ ........ ........ .#...... #....... ........ ........ ........ ........
@@ -133,14 +144,27 @@ struct Features {
 
 constexpr Features Feature = Features();
 
+static_assert(popcount(Feature.masks[0]) <= MaxFocusedSquareCount);
+static_assert(popcount(Feature.masks[1]) <= MaxFocusedSquareCount);
+static_assert(popcount(Feature.masks[2]) <= MaxFocusedSquareCount);
+static_assert(popcount(Feature.masks[3]) <= MaxFocusedSquareCount);
+static_assert(popcount(Feature.masks[4]) <= MaxFocusedSquareCount);
+static_assert(popcount(Feature.masks[5]) <= MaxFocusedSquareCount);
+static_assert(popcount(Feature.masks[6]) <= MaxFocusedSquareCount);
+static_assert(popcount(Feature.masks[7]) <= MaxFocusedSquareCount);
+static_assert(popcount(Feature.masks[8]) <= MaxFocusedSquareCount);
+static_assert(popcount(Feature.masks[9]) <= MaxFocusedSquareCount);
+static_assert(popcount(Feature.masks[10]) <= MaxFocusedSquareCount);
+
+
 // abcdef...(2) -> abcdef...(3)
 struct Base3Conversion {
-    int table[1 << 8];
+    int table[1 << MaxFocusedSquareCount];
 
     constexpr Base3Conversion() : table{} {
-        for (int i = 0; i < (1 << 8); ++i) {
+        for (int i = 0; i < (1 << MaxFocusedSquareCount); ++i) {
             int d = 1;
-            for (int j = 0; j < 8; ++j) {
+            for (int j = 0; j < MaxFocusedSquareCount; ++j) {
                 if (i >> j & 1) table[i] += d;
                 d *= 3;
             }
@@ -154,8 +178,9 @@ constexpr auto ToBase3 = Base3Conversion();
 // 空=0, 黒=1, 白=2;
 // テーブル最高。
 inline int convert(Bitboard p, Bitboard o) {
+    constexpr int mask = (1 << MaxFocusedSquareCount) - 1;
     // 3進数では桁かぶりがないので足し算できる。
-    return ToBase3.table[p & 0xff] + (ToBase3.table[o & 0xff] << 1);
+    return ToBase3.table[p & mask] + (ToBase3.table[o & mask] << 1);
 }
 
 inline int extract(Bitboard p, Bitboard o, int g) {
