@@ -11,7 +11,7 @@ Color Reversi::winner() const {
 // 盤面を進める。
 // 不正な手であればfalseを返す。
 bool Reversi::move(int sq) {
-    if (moves >> sq & 1ULL ^ 1ULL) return false;
+    if ((moves >> sq & 1ULL) ^ 1ULL) return false;
 
     Bitboard sqbit = 1ULL << sq;
     Bitboard flip = getFlip(p, o, sqbit);
@@ -36,7 +36,7 @@ bool Reversi::move(int sq) {
 }
 
 void Reversi::print() const {
-    char cTable[0b100];
+    char cTable[0b100 + 1];
     cTable[0b000] = ' ';
     cTable[0b001] = 'X';
     cTable[0b010] = 'O';

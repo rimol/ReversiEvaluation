@@ -65,8 +65,12 @@ struct CandidateMove {
     int weightedMobility;
 
     // ソート用
-    bool operator < (const CandidateMove& cm) {
+    bool operator < (const CandidateMove& cm) const {
         return weightedMobility < cm.weightedMobility;
+    }
+
+    bool operator > (const CandidateMove& cm) const {
+        return weightedMobility > cm.weightedMobility;
     }
 };
 

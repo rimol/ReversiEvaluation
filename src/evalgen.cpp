@@ -3,47 +3,49 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
-#include <filesystem>
 #include <sstream>
 #include <time.h>
 #include "bitboard.h"
 #include "recode.h"
 #include "eval.h"
 #include "evalgen.h"
+#include "util.h"
 
-static double evaluationValues[GroupNum][EvalArrayLength];
+static double evalValues[GroupNum][EvalArrayLength];
 static double mobilityWeight;
 static double intercept;
 
 // 更新分の保存用
-static double valDiff[GroupNum][EvalArrayLength];
-static double mobDiff;
-static double interceptDiff;
+static double evalValueUpdates[GroupNum][EvalArrayLength];
+static double mobilityUpdate;
+static double interceptUpdate;
 
 // 使う棋譜中で各特徴が出現する回数
 // ステップサイズを決めるのに使う
 static int featureFrequency[GroupNum][EvalArrayLength];
 
-static double evaluateWithCurrentWeight(const RecodeEx& recodeEx) {
-    int t = popcount(recodeEx.p_r[0] | recodeEx.o_r[0]) - 4 - 1;
+// y - e
+static double evalLoss(const RecodeEx& recodeEx) {
+    int t = popcount(recodeEx.playerRotatedBB[0] | recodeEx.opponentRotatedBB[0]) - 4 - 1;
     double e = intercept;
     for (int i = 0; i < FeatureNum; ++i) {
         int g = Feature.group[i];
-        Bitboard p_ = recodeEx.p_r[Feature.rotationType[i]];
-        Bitboard o_ = recodeEx.o_r[Feature.rotationType[i]];
+        Bitboard p_ = recodeEx.playerRotatedBB[Feature.rotationType[i]];
+        Bitboard o_ = recodeEx.opponentRotatedBB[Feature.rotationType[i]];
 
-        e += evaluationValues[g][extract(p_, o_, g)];
+        e += evalValues[g][extract(p_, o_, g)];
     }
     
-    return e + (double)getMobility(recodeEx.p_r[0], recodeEx.o_r[0]) * mobilityWeight;
+    e += (double)getMobility(recodeEx.playerRotatedBB[0], recodeEx.opponentRotatedBB[0]) * mobilityWeight;
+    return (double)recodeEx.result - e;
 }
 
 // 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
 static double calculateEvaluationValue(std::string recodeFilePath, double beta) {
     // 配列の初期化（0埋め）
-    std::fill((double*)evaluationValues, (double*)(evaluationValues + GroupNum), 0);
+    std::fill((double*)evalValues, (double*)(evalValues + GroupNum), 0);
     std::fill((int*)featureFrequency, (int*)(featureFrequency + GroupNum), 0);
-    mobilityWeight = mobDiff = intercept = interceptDiff = 0.0;
+    mobilityWeight = mobilityUpdate = intercept = interceptUpdate = 0.0;
 
     // ファイルを何回も読むのは無駄なので最初に全部読み込む
     std::ifstream ifs(recodeFilePath, std::ios::ate | std::ios::binary);
@@ -69,56 +71,57 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
     for (RecodeEx recodeEx : recodes) {
         for (int i = 0; i < FeatureNum; ++i) {
             int g = Feature.group[i];
-            Bitboard p_ = recodeEx.p_r[Feature.rotationType[i]];
-            Bitboard o_ = recodeEx.o_r[Feature.rotationType[i]];
+            Bitboard p_ = recodeEx.playerRotatedBB[Feature.rotationType[i]];
+            Bitboard o_ = recodeEx.opponentRotatedBB[Feature.rotationType[i]];
             ++featureFrequency[g][extract(p_, o_, g)];
         }
     }
 
-    double previousVariance = 0.0;
+    double prevSquaredLossSum = 0.0;
     long long loopCounter = 0;
     // ピピーーッ！無限ループ！！逮捕！！
     while(true) {
         // 偏差の2乗の和
-        double squaredError = 0;
+        double squaredLossSum = 0;
         for (RecodeEx recodeEx : recodes) {
             // 残差
-            double r = ((double)recodeEx.result - evaluateWithCurrentWeight(recodeEx));
-            squaredError += r * r;
+            double loss = evalLoss(recodeEx);
+            squaredLossSum += loss * loss;
             // このデータで出現する各特徴に対し更新分を加算していく
             for (int i = 0; i < FeatureNum; ++i) {
                 int g = Feature.group[i];
-                Bitboard p_ = recodeEx.p_r[Feature.rotationType[i]];
-                Bitboard o_ = recodeEx.o_r[Feature.rotationType[i]];
-                valDiff[g][extract(p_, o_, g)] += r;
+                Bitboard p_ = recodeEx.playerRotatedBB[Feature.rotationType[i]];
+                Bitboard o_ = recodeEx.opponentRotatedBB[Feature.rotationType[i]];
+                evalValueUpdates[g][extract(p_, o_, g)] += loss;
             }
 
             // mobility
-            mobDiff += r * getMobility(recodeEx.p_r[0], recodeEx.o_r[0]);
-            interceptDiff += r;
+            mobilityUpdate += loss * getMobility(recodeEx.playerRotatedBB[0], recodeEx.opponentRotatedBB[0]);
+            interceptUpdate += loss;
         }
 
-        double currentVariance = squaredError / (double)M;
+        double currentVariance = squaredLossSum / (double)M;
+
         // 終了条件わからん
         // 「前回との差がピッタリ0」を条件にすると終わらない
-        if (std::abs(previousVariance - currentVariance) < 10e-6) {
+        if (std::abs(squaredLossSum - prevSquaredLossSum) < 10e-6) {
             std::cout << "Done. variance: " << currentVariance << ", loop: " << loopCounter << " times" << std::endl;
             return currentVariance;
         }
 
-        previousVariance = currentVariance;
+        prevSquaredLossSum = squaredLossSum;
 
         // update
         for (int i = 0; i < GroupNum; ++i) {
             for (int j = 0; j < EvalArrayLength; ++j) {
-                evaluationValues[i][j] += valDiff[i][j] * std::min(beta / 50.0, beta / (double)featureFrequency[i][j]);
-                valDiff[i][j] = 0.0;
+                evalValues[i][j] += evalValueUpdates[i][j] * std::min(beta / 50.0, beta / (double)featureFrequency[i][j]);
+                evalValueUpdates[i][j] = 0.0;
             }
         }
-        mobilityWeight += mobDiff * beta / (double)M;
-        intercept += interceptDiff * beta / (double)M;
+        mobilityWeight += mobilityUpdate * beta / (double)M;
+        intercept += interceptUpdate * beta / (double)M;
 
-        mobDiff = interceptDiff = 0.0;
+        mobilityUpdate = interceptUpdate = 0.0;
 
         if (++loopCounter % 1000 == 0) {
             std::cout << "current variance: " << currentVariance << ", loop: " << loopCounter << " times" << std::endl;
@@ -126,22 +129,21 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
     }
 }
 
-void generateEvaluationFiles(std::filesystem::path recodesFolderPath, std::filesystem::path outputFolderPath, double beta) {
-    outputFolderPath /= std::to_string(time(NULL));
-    // フォルダ作成
-    std::filesystem::create_directory(outputFolderPath);
-
+void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFolderPath, double beta) {
+    outputFolderPath = createCurrentTimeFolderIn(recodesFolderPath);
     // 分散を保存するファイルを作る
-    std::ofstream vofs((outputFolderPath / "variance.txt").string());
+    std::ofstream vofs(addFileNameAtEnd(outputFolderPath, "variance", "txt"));
 
     // (1-60).binについてそれぞれ計算→保存
     for (int i = 60; i >= 1; --i) {
+        std::string saveFilePath = addFileNameAtEnd(outputFolderPath, std::to_string(i), "bin");
         // ファイルパスを渡して計算させる
-        double variance = calculateEvaluationValue((recodesFolderPath / (std::to_string(i) + ".bin")).string(), beta);
+        double variance = calculateEvaluationValue(saveFilePath, beta);
         // 保存～
         vofs << i << ".bin: " << variance << std::endl;
-        std::ofstream ofs((outputFolderPath / (std::to_string(i) + ".bin")).string(), std::ios::binary);
-        ofs.write((char*)evaluationValues, sizeof(double) * GroupNum * EvalArrayLength);
+
+        std::ofstream ofs(saveFilePath, std::ios::binary);
+        ofs.write((char*)evalValues, sizeof(double) * GroupNum * EvalArrayLength);
         ofs.write((char*)&mobilityWeight, sizeof(double));
         ofs.write((char*)&intercept, sizeof(double));
     }

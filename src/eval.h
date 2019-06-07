@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cassert>
-#include <filesystem>
 #include <string>
 #include "bitboard.h"
 
@@ -187,5 +186,5 @@ inline int extract(Bitboard p, Bitboard o, int g) {
     return convert(pext(p, Feature.masks[g]), pext(o, Feature.masks[g]));
 }
 
-void loadEvalValues(std::filesystem::path evalValuesFolderPath);
+void loadEvalValues(std::string evalValuesFolderPath);
 double evaluate(Bitboard p, Bitboard o);

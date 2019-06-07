@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <filesystem>
 #include <iostream>
 #include <string>
 #include "bitboard.h"
@@ -26,7 +25,7 @@ void doReversi() {
 	Reversi reversi;
 	Color human;
 	int depth;
-	std::filesystem::path evalValuesFolderPath;
+	std::string evalValuesFolderPath;
 	std::cout << "Choose your stone color from black(0) or white(1):";
 	std::cin >> human;
 	std::cout << "Enter the search depth:";
@@ -63,7 +62,7 @@ void doReversi() {
 
 void doRecGen() {
 	int n, depth;
-	std::filesystem::path folderPath;
+	std::string folderPath;
 	std::cout << "Specify the number of recodes you want to generate:";
 	std::cin >> n;
 	std::cout << "Specify a depth of the exact play:";
@@ -77,7 +76,7 @@ void doRecGen() {
 }
 
 void doEvalGen() {
-	std::filesystem::path recodesFolderPath, outputFolderPath;
+	std::string recodesFolderPath, outputFolderPath;
 	double beta;
 	std::cout << "Enter a folder path where recodes are stored:";
 	std::cin >> recodesFolderPath;
@@ -94,7 +93,7 @@ void doEvalGen() {
 void doAutoPlay() {
 	int N;
 	int depth;
-	std::filesystem::path evalValuesFolderPath;
+	std::string evalValuesFolderPath;
 	std::cout << "Enter the number of plays you want to make:";
 	std::cin >> N;
 	std::cout << "Enter the search depth:";
@@ -112,11 +111,11 @@ void doThorConversion() {
 	std::cout << "Enter the number of thor database files:";
 	std::cin >> N;
 	std::cout << "Enter each file path:";
-	std::vector<std::filesystem::path> paths(N);
+	std::vector<std::string> paths(N);
 	for (int i = 0; i < N; ++i) {
 		std::cin >> paths[i];
 	}
-	std::filesystem::path output;
+	std::string output;
 	std::cout << "Enter a output folder path:";
 	std::cin >> output;
 

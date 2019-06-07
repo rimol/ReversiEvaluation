@@ -1,5 +1,4 @@
 #include <fstream>
-#include <filesystem>
 #include <random>
 #include <sstream>
 #include <string>
@@ -11,23 +10,21 @@
 #include "recode.h"
 #include "reversi.h"
 #include "solver.h"
+#include "util.h"
 
 struct RecgenPosition {
     Bitboard p, o;
     Color c;
 };
 
-void generateRecode(int n, int depth, std::filesystem::path folderPath) {
+void generateRecode(int n, int depth, std::string folderPath) {
     // 指定されたフォルダに保存用フォルダを作成
     // フォルダ名は現在時刻
-    folderPath /= std::to_string(time(NULL));
-
-    // フォルダ作成
-    std::filesystem::create_directory(folderPath);
+    folderPath = createCurrentTimeFolderIn(folderPath);
 
     std::ofstream ofss[60];
     for (int i = 0; i < 60; ++i) {
-        ofss[i] = std::ofstream(folderPath / (std::to_string(i + 1) + ".bin"), std::ios::binary);
+        ofss[i] = std::ofstream(addFileNameAtEnd(folderPath, std::to_string(i + 1), "bin"), std::ios::binary);
     }
 
     std::random_device rnd; // 非決定的乱数生成器、これでメルセンヌ・ツイスタのシードを設定

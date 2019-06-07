@@ -2,17 +2,18 @@
 #include "recode.h"
 #include "reversi.h"
 #include "thor.h"
+#include "util.h"
 
-void convertThorDatabaseToRecodeFiles(const std::vector<std::filesystem::path> &thorDatabasePaths, std::filesystem::path outputFolderPath) {
+void convertThorDatabaseToRecodeFiles(const std::vector<std::string> &thorDatabasePaths, std::string outputFolderPath) {
     std::ofstream ofss[60];
     for (int i = 0; i < 60; ++i) {
-        ofss[i] = std::ofstream(outputFolderPath / (std::to_string(i + 1) + ".bin"), std::ios::binary);
+        ofss[i] = std::ofstream(addFileNameAtEnd(outputFolderPath, std::to_string(i + 1), "bin"), std::ios::binary);
     }
 
     int totalRecodeNum = 0;
 
     for (auto path : thorDatabasePaths) {
-        std::ifstream ifs(path.string(), std::ios::ate | std::ios::binary);
+        std::ifstream ifs(path, std::ios::ate | std::ios::binary);
         if (!ifs) {
             std::cout << "entered path is invalid" << std::endl;
             continue;
