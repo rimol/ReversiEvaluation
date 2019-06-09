@@ -79,9 +79,15 @@ void getContentsOfNext(std::string tagName, const std::string& gameResultString,
 }
 
 int toNumericSQ(char colAlphabet, char rowNumber) {
-    assert('A' <= colAlphabet && colAlphabet <= 'H');
     assert('1' <= rowNumber && rowNumber <= '8');
-    return (7 - (colAlphabet - 'A')) + (7 - (rowNumber - '1')) * 8;
+    
+    if ('a' <= colAlphabet && colAlphabet <= 'h') {
+        return (7 - (colAlphabet - 'a')) + (7 - (rowNumber - '1')) * 8;
+    }
+    else if ('A' <= colAlphabet && colAlphabet <= 'H') {
+        return (7 - (colAlphabet - 'A')) + (7 - (rowNumber - '1')) * 8;
+    }
+    else assert(false);
 }
 
 void convertGGFToRecordsAndWrite(const std::string& gameResultString, std::ofstream (&ofss)[60]) {
