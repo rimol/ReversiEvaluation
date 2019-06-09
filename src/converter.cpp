@@ -69,10 +69,10 @@ void getContentsOfNext(std::string tagName, const std::string& gameResultString,
         }
 
         if (found && gameResultString[i + tagName.size()] == '[') {
-            int left = i + tagName.size() + 1;
-            int right = gameResultString.find_first_of(']', i + tagName.size() + 1) - 1;
-            out = gameResultString.substr(left, right - left + 1);
-            cur = right + 1;
+            int first = i + tagName.size() + 1;
+            int last = gameResultString.find_first_of(']', i + tagName.size() + 1) - 1;
+            out = gameResultString.substr(first, last - first + 1);
+            cur = last + 1;
             break;
         }
     }
