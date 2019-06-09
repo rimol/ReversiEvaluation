@@ -104,7 +104,7 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
 
         // 終了条件わからん
         // 「前回との差がピッタリ0」を条件にすると終わらない
-        if (std::abs(squaredLossSum - prevSquaredLossSum) < 10e-6) {
+        if (std::abs(squaredLossSum - prevSquaredLossSum) < 10e-4) {
             std::cout << "Done. variance: " << currentVariance << ", loop: " << loopCounter << " times" << std::endl;
             return currentVariance;
         }
@@ -136,13 +136,12 @@ void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFo
 
     // (1-60).binについてそれぞれ計算→保存
     for (int i = 60; i >= 1; --i) {
-        std::string saveFilePath = addFileNameAtEnd(outputFolderPath, std::to_string(i), "bin");
         // ファイルパスを渡して計算させる
-        double variance = calculateEvaluationValue(saveFilePath, beta);
+        double variance = calculateEvaluationValue(addFileNameAtEnd(recodesFolderPath, std::to_string(i), "bin"), beta);
         // 保存～
         vofs << i << ".bin: " << variance << std::endl;
 
-        std::ofstream ofs(saveFilePath, std::ios::binary);
+        std::ofstream ofs(addFileNameAtEnd(outputFolderPath, std::to_string(i), "bin"), std::ios::binary);
         ofs.write((char*)evalValues, sizeof(double) * GroupNum * EvalArrayLength);
         ofs.write((char*)&mobilityWeight, sizeof(double));
         ofs.write((char*)&intercept, sizeof(double));
