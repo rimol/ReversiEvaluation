@@ -9,7 +9,7 @@
 #include "reversi.h"
 #include "solver.h"
 #include "test.h"
-#include "thor.h"
+#include "converter.h"
 
 void doReversi() {
 	int AlphabetToNumber[1 << 8];
@@ -116,11 +116,29 @@ void doThorConversion() {
 		std::cin >> paths[i];
 	}
 	std::string output;
-	std::cout << "Enter a output folder path:";
+	std::cout << "Enter an output folder path:";
 	std::cin >> output;
 
 	convertThorDatabaseToRecodeFiles(paths, output);
 
+	std::cout << "Done!" << std::endl;
+}
+
+void doGGFConversion() {
+	int N;
+	std::string outputFolderPath;
+	std::cout << "Enter the number of GGF database files:";
+	std::cin >> N;
+	std::vector<std::string> databaseFilePaths(N);
+	std::cout << "Enter each file path:";
+	for (int i = 0; i < N; ++i) {
+		std::cin >> databaseFilePaths[i];
+	}
+	
+	std::cout << "Enter an output folder path:";
+	std::cin >> outputFolderPath;
+
+	convertGGFDatabaseToRecords(databaseFilePaths, outputFolderPath);
 	std::cout << "Done!" << std::endl;
 }
 
@@ -136,6 +154,7 @@ int main() {
 		else if (command == "ffo") ffotest();
 		else if (command == "autoplay") doAutoPlay();
 		else if (command == "thorconv") doThorConversion();
+		else if (command == "ggfconv") doGGFConversion();
   		else if (command == "exit") break; 
 	}
 
