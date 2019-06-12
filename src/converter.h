@@ -1,5 +1,6 @@
 //Thorデータベースの書式について: http://hp.vector.co.jp/authors/VA015468/platina/algo/append_a.html
 //棋譜 http://www.ffothello.org/informatique/la-base-wthor/
+// https://www.skatgame.net/mburo/ggs/game-archive/Othello/
 #include <cstdint>
 #include <string>
 #include <vector>

@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cctype>
 #include <fstream>
 #include "recode.h"
 #include "reversi.h"
@@ -58,56 +59,104 @@ void convertThorDatabaseToRecodeFiles(const std::vector<std::string> &thorDataba
     std::cout << "Total: " << totalRecodeNum << " recodes were converted!" << std::endl;
 }
 
-void getContentsOfNext(std::string tagName, const std::string& gameResultString, int& cur, std::string& out) {
-    for (int i = cur; cur < (gameResultString.size() - tagName.size() - 2); ++i) {
+class StringWithCursor {
+    int cur = 0;
+    std::string str;
+
+    public:
+
+    StringWithCursor(std::string str) : str(str) {}
+    char get(int i) const { return str[i]; }
+    int size() const { return str.size(); }
+    int cursor() const { return cur; }
+
+    bool findFirstOf(char c, int first, int& out) const {
+        out = str.find_first_of(c, first);
+        return out != -1;
+    }
+
+    void substr(int first, int length, std::string& out) const {
+        out = str.substr(first, length);
+    }
+
+    void setCursor(int i) { cur = i; }
+};
+
+/*
+'tagName'["ここを抜き出す"]
+抜き出せなかったらfalse
+抜き出す内容が空の場合があるがそれはtrueにしとく。
+抜き出せたらカーソルを動かす
+ */
+bool getNextContents(std::string tagName, StringWithCursor& swc, std::string& out) {
+    for (int i = swc.cursor(); i < (swc.size() - tagName.size() - 2); ++i) {
         bool found = true;
         for (int j = 0; j < tagName.size(); ++j) {
-            if (gameResultString[i + j] != tagName[j]) {
+            if (swc.get(i + j) != tagName[j]) {
                 found = false;
                 break;
             }
         }
 
-        if (found && gameResultString[i + tagName.size()] == '[') {
-            int first = i + tagName.size() + 1;
-            int last = gameResultString.find_first_of(']', i + tagName.size() + 1) - 1;
-            out = gameResultString.substr(first, last - first + 1);
-            cur = last + 1;
-            break;
+        if (found && swc.get(i + tagName.size()) == '[') {
+            // [の位置
+            int first = i + tagName.size();
+            // ]の位置
+            int last;
+
+            if (swc.findFirstOf(']', i + tagName.size() + 1, last)) {
+                swc.substr(first + 1, last - first - 1, out);
+                swc.setCursor(last + 1);
+                return true;
+            }
         }
     }
+
+    return false;
 }
 
-int toNumericSQ(char colAlphabet, char rowNumber) {
-    assert('1' <= rowNumber && rowNumber <= '8');
-    
-    if ('a' <= colAlphabet && colAlphabet <= 'h') {
-        return (7 - (colAlphabet - 'a')) + (7 - (rowNumber - '1')) * 8;
-    }
-    else if ('A' <= colAlphabet && colAlphabet <= 'H') {
-        return (7 - (colAlphabet - 'A')) + (7 - (rowNumber - '1')) * 8;
-    }
-    else assert(false);
+int toNumericSQ(const std::string& moveString) {
+    char colAlphabet = moveString[0];
+    char rowNumber = moveString[1];
+
+    char base = 'a' <= colAlphabet && colAlphabet <= 'h' ? 'a' : 'A';
+
+    return (7 - (colAlphabet - base)) + (7 - (rowNumber - '1')) * 8;
+}
+
+bool isValidMoveString(const std::string& moveString) {
+    if (moveString.size() < 2) return false;
+
+    char colAlphabet = moveString[0];
+    char rowNumber = moveString[1];
+
+    return ('1' <= rowNumber && rowNumber <= '8')
+        && (('a' <= colAlphabet && colAlphabet <= 'h') || ('A' <= colAlphabet && colAlphabet <= 'H'));
 }
 
 void convertGGFToRecordsAndWrite(const std::string& gameResultString, std::ofstream (&ofss)[60]) {
-    int cur = 0;
+    StringWithCursor swc(gameResultString);
     std::string boardString;
-    getContentsOfNext("BO", gameResultString, cur, boardString);
+
+    if (!getNextContents("BO", swc, boardString)) return;
+
     // 一般的な初期盤面以外は省く。
     if (boardString != "8 -------- -------- -------- ---O*--- ---*O--- -------- -------- -------- *") return;
-
+    
     const std::string tags[] = { "B", "W" };
     Reversi reversi;
     std::vector<Reversi> pastPos;
     while (!reversi.isFinished) {
         std::string moveString;
-        getContentsOfNext(tags[reversi.c], gameResultString, cur, moveString);
-        int sq = toNumericSQ(moveString[0], moveString[1]);
+        // ファイルぶっ壊れてる旨のメッセージ出した方がよいです。
+        if (!getNextContents(tags[reversi.c], swc, moveString)) return;
+        if (!isValidMoveString(moveString)) return;
+
+        int sq = toNumericSQ(moveString);
         bool sucess = reversi.move(sq);
 
         if (!sucess) {
-            std::cout << "an illegal move was detected" << std::endl;
+            std::cout << "an illegal move was detected." << std::endl;
             return;
         }
 
@@ -126,6 +175,35 @@ void convertGGFToRecordsAndWrite(const std::string& gameResultString, std::ofstr
     }
 }
 
+// (;[ここを抜き出す];) 抜き出せなかったらfalseを返す
+bool extractNextGameResult(std::ifstream& ifs, std::string& out) {
+    std::stringstream ss;
+    bool leftFound = false;
+    bool prevIsLeftBracket = false;
+    bool prevIsSemicolon = false;
+    while (true) {
+        char c = ifs.get();
+        // みつかる前に終端
+        if (ifs.eof()) return false;
+
+        if (leftFound) {
+            if (c == ';') prevIsSemicolon = true;
+            else if (c == ')' && prevIsSemicolon) {
+                out = ss.str();
+                return true;
+            } 
+            else if (c != ')' && prevIsSemicolon) {
+                ss << ';' << c;
+            }
+            else ss << c;
+        }
+        else {
+            if (c == '(') prevIsLeftBracket = true;
+            else if (c == ';' && prevIsLeftBracket) leftFound = true;
+        }
+    }
+}
+
 void convertGGFDatabaseToRecords(const std::vector<std::string> &ggfDatabasePaths, std::string outputFolderPath) {
     std::ofstream ofss[60];
     for (int i = 0; i < 60; ++i) {
@@ -134,9 +212,12 @@ void convertGGFDatabaseToRecords(const std::vector<std::string> &ggfDatabasePath
 
     for (std::string path : ggfDatabasePaths) {
         std::ifstream ifs(path);
-        std::string gameResultString;
-        std::getline(ifs, gameResultString);
 
-        convertGGFToRecordsAndWrite(gameResultString, ofss);
+        if (!ifs.is_open()) continue;
+
+        std::string gameResultString;
+        while (extractNextGameResult(ifs, gameResultString)) {
+            convertGGFToRecordsAndWrite(gameResultString, ofss);
+        }
     }
 }
