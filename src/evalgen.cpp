@@ -11,41 +11,72 @@
 #include "evalgen.h"
 #include "util.h"
 
-static double evalValues[GroupNum][EvalArrayLength];
+#define FOREACH_FEATURE_VALUE(Statement) \
+for (int i = 0; i < GroupNum; ++i) { \
+    for (int j = 0; j < EvalArrayLength; ++j) { \
+        auto& fv = featureValues[i][j]; \
+        Statement \
+    } \
+} \
+
+#define FOREACH_FEATURE_IN(_recodeEx, Statement) \
+for (int i = 0; i < FeatureNum; ++i) { \
+    int _g = Feature.group[i]; \
+    Bitboard _p = (_recodeEx).playerRotatedBB[Feature.rotationType[i]]; \
+    Bitboard _o = (_recodeEx).opponentRotatedBB[Feature.rotationType[i]]; \
+    auto& fv = featureValues[_g][extract(_p, _o, _g)]; \
+    Statement \
+} \
+
+// 各特徴の評価値、評価値の更新分、ステップサイズをまとめて持つ
+struct FeatureValue {
+    double evalValue = 0.0;
+    double evalValueUpdate = 0.0;
+    double stepSize = 0.0;
+};
+
+static FeatureValue featureValues[GroupNum][EvalArrayLength];
+
 static double mobilityWeight;
 static double intercept;
 
 // 更新分の保存用
-static double evalValueUpdates[GroupNum][EvalArrayLength];
 static double mobilityUpdate;
 static double interceptUpdate;
 
-// 使う棋譜中で各特徴が出現する回数
-// ステップサイズを決めるのに使う
-static int featureFrequency[GroupNum][EvalArrayLength];
+// stepSizes[i][j] = min(beta/50, beta/(特徴ijが出現する回数));
+static double stepSize2;
+
+static void fillAllArraysAndVarialblesWithZero() {
+    std::fill((FeatureValue*)featureValues, (FeatureValue*)(featureValues + GroupNum), FeatureValue());
+    mobilityWeight = mobilityUpdate = intercept = interceptUpdate = stepSize2 = 0.0;
+}
 
 // y - e
 static double evalLoss(const RecodeEx& recodeEx) {
-    int t = popcount(recodeEx.playerRotatedBB[0] | recodeEx.opponentRotatedBB[0]) - 4 - 1;
     double e = intercept;
-    for (int i = 0; i < FeatureNum; ++i) {
-        int g = Feature.group[i];
-        Bitboard p_ = recodeEx.playerRotatedBB[Feature.rotationType[i]];
-        Bitboard o_ = recodeEx.opponentRotatedBB[Feature.rotationType[i]];
 
-        e += evalValues[g][extract(p_, o_, g)];
-    }
-    
+    FOREACH_FEATURE_IN(recodeEx, { e += fv.evalValue; })
+
     e += (double)getMobility(recodeEx.playerRotatedBB[0], recodeEx.opponentRotatedBB[0]) * mobilityWeight;
     return (double)recodeEx.result - e;
 }
 
+static void applyUpdatesOfEvalValues() {
+    FOREACH_FEATURE_VALUE(
+        fv.evalValue += fv.evalValueUpdate * fv.stepSize;
+        fv.evalValueUpdate = 0.0;
+    )
+
+    mobilityWeight += mobilityUpdate * stepSize2;
+    intercept += interceptUpdate * stepSize2;
+
+    mobilityUpdate = interceptUpdate = 0.0;
+}
+
 // 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
 static double calculateEvaluationValue(std::string recodeFilePath, double beta) {
-    // 配列の初期化（0埋め）
-    std::fill((double*)evalValues, (double*)(evalValues + GroupNum), 0);
-    std::fill((int*)featureFrequency, (int*)(featureFrequency + GroupNum), 0);
-    mobilityWeight = mobilityUpdate = intercept = interceptUpdate = 0.0;
+    fillAllArraysAndVarialblesWithZero();
 
     // ファイルを何回も読むのは無駄なので最初に全部読み込む
     std::ifstream ifs(recodeFilePath, std::ios::ate | std::ios::binary);
@@ -67,15 +98,14 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
         recodes[i] = RecodeEx(rec);
     }
 
-    // 特徴の出現回数を予め計算しておく。
-    for (RecodeEx recodeEx : recodes) {
-        for (int i = 0; i < FeatureNum; ++i) {
-            int g = Feature.group[i];
-            Bitboard p_ = recodeEx.playerRotatedBB[Feature.rotationType[i]];
-            Bitboard o_ = recodeEx.opponentRotatedBB[Feature.rotationType[i]];
-            ++featureFrequency[g][extract(p_, o_, g)];
-        }
+    // 予め各特徴のステップサイズを計算しておく。
+    for (const auto& recodeEx : recodes) {
+        FOREACH_FEATURE_IN(recodeEx, { ++fv.stepSize; })
     }
+
+    FOREACH_FEATURE_VALUE(
+        fv.stepSize = std::min(beta / 50.0, beta / fv.stepSize);
+    )
 
     double prevSquaredLossSum = 0.0;
     long long loopCounter = 0;
@@ -83,17 +113,12 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
     while(true) {
         // 偏差の2乗の和
         double squaredLossSum = 0;
-        for (RecodeEx recodeEx : recodes) {
+        for (const auto& recodeEx : recodes) {
             // 残差
             double loss = evalLoss(recodeEx);
             squaredLossSum += loss * loss;
             // このデータで出現する各特徴に対し更新分を加算していく
-            for (int i = 0; i < FeatureNum; ++i) {
-                int g = Feature.group[i];
-                Bitboard p_ = recodeEx.playerRotatedBB[Feature.rotationType[i]];
-                Bitboard o_ = recodeEx.opponentRotatedBB[Feature.rotationType[i]];
-                evalValueUpdates[g][extract(p_, o_, g)] += loss;
-            }
+            FOREACH_FEATURE_IN(recodeEx, { fv.evalValueUpdate += loss; })
 
             // mobility
             mobilityUpdate += loss * getMobility(recodeEx.playerRotatedBB[0], recodeEx.opponentRotatedBB[0]);
@@ -104,26 +129,18 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
 
         // 終了条件わからん
         // 「前回との差がピッタリ0」を条件にすると終わらない
-        if (std::abs(squaredLossSum - prevSquaredLossSum) < 10e-4) {
+        // -> １局面あたりの変化（の二乗）がXを下回ったら終了する
+        constexpr double X = 10e-4;
+        if (std::abs(squaredLossSum - prevSquaredLossSum) / (double)M < X) {
             std::cout << "Done. variance: " << currentVariance << ", loop: " << loopCounter << " times" << std::endl;
             return currentVariance;
         }
 
         prevSquaredLossSum = squaredLossSum;
 
-        // update
-        for (int i = 0; i < GroupNum; ++i) {
-            for (int j = 0; j < EvalArrayLength; ++j) {
-                evalValues[i][j] += evalValueUpdates[i][j] * std::min(beta / 50.0, beta / (double)featureFrequency[i][j]);
-                evalValueUpdates[i][j] = 0.0;
-            }
-        }
-        mobilityWeight += mobilityUpdate * beta / (double)M;
-        intercept += interceptUpdate * beta / (double)M;
+        applyUpdatesOfEvalValues();
 
-        mobilityUpdate = interceptUpdate = 0.0;
-
-        if (++loopCounter % 1000 == 0) {
+        if (++loopCounter % 10 == 0) {
             std::cout << "current variance: " << currentVariance << ", loop: " << loopCounter << " times" << std::endl;
         }
     }
@@ -142,7 +159,10 @@ void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFo
         vofs << i << ".bin: " << variance << std::endl;
 
         std::ofstream ofs(addFileNameAtEnd(outputFolderPath, std::to_string(i), "bin"), std::ios::binary);
-        ofs.write((char*)evalValues, sizeof(double) * GroupNum * EvalArrayLength);
+        // 評価値のみ保存したいので仕方なしループ
+        FOREACH_FEATURE_VALUE(
+            ofs.write((char*)&fv.evalValue, sizeof(double));
+        )
         ofs.write((char*)&mobilityWeight, sizeof(double));
         ofs.write((char*)&intercept, sizeof(double));
     }
