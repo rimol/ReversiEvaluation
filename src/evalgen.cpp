@@ -147,7 +147,7 @@ static double calculateEvaluationValue(std::string recodeFilePath, double beta) 
 }
 
 void generateEvaluationFiles(std::string recodesFolderPath, std::string outputFolderPath, double beta) {
-    outputFolderPath = createCurrentTimeFolderIn(recodesFolderPath);
+    outputFolderPath = createCurrentTimeFolderIn(outputFolderPath);
     // 分散を保存するファイルを作る
     std::ofstream vofs(addFileNameAtEnd(outputFolderPath, "variance", "txt"));
 
