@@ -18,3 +18,4 @@ struct Thor
 
 void convertThorDatabaseToRecodeFiles(const std::vector<std::string> &thorDatabasePaths, std::string outputFolderPath);
 void convertGGFDatabaseToRecords(const std::vector<std::string> &ggfDatabasePaths, std::string outputFolderPath);
+void mergeRecordFiles(std::string folderPath0, std::string folderPath1);

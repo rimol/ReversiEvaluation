@@ -221,3 +221,20 @@ void convertGGFDatabaseToRecords(const std::vector<std::string> &ggfDatabasePath
         }
     }
 }
+
+void mergeRecordFiles(std::string folderPath0, std::string folderPath1) {
+    for (int i = 1; i <= 60; ++i) {
+        std::ofstream ofs(addFileNameAtEnd(folderPath0, std::to_string(i), "bin"), std::ios::binary | std::ios::app);
+        std::ifstream ifs(addFileNameAtEnd(folderPath1, std::to_string(i), "bin"), std::ios::binary | std::ios::ate);
+
+        if (!ifs.is_open()) continue;
+        if (!ofs.is_open()) continue;
+
+        const int RecordNum = ifs.tellg() / sizeof(Recode);
+        ifs.seekg(0);
+
+        std::vector<Recode> tmp(RecordNum);
+        ifs.read((char*)&tmp[0], RecordNum * sizeof(Recode));
+        ofs.write((char*)&tmp[0], RecordNum * sizeof(Recode));
+    }
+}

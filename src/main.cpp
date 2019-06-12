@@ -137,6 +137,16 @@ void doGGFConversion() {
 	std::cout << "Done!" << std::endl;
 }
 
+void doRecordMerge() {
+	std::string folderPath0, folderPath1;
+	std::cout << "Enter a folder path where recodes are stored:";
+	std::cin >> folderPath0;
+	std::cout << "Enter another folder path where recodes are stored:";
+	std::cin >> folderPath1;
+	
+	mergeRecordFiles(folderPath0, folderPath1);
+}
+
 int main() {
 	while (true) {
 		std::cout << "Enter a command:";
@@ -150,6 +160,7 @@ int main() {
 		else if (command == "autoplay") doAutoPlay();
 		else if (command == "thorconv") doThorConversion();
 		else if (command == "ggfconv") doGGFConversion();
+		else if (command == "mergerec") doRecordMerge();
   		else if (command == "exit") break; 
 	}
 
