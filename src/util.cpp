@@ -10,6 +10,8 @@ bool makeFolder(std::string folderPath) {
 }
 #elif __APPLE__
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <dirent.h>
 constexpr char PathDivider = '/';
 
 bool makeFolder(std::string folderPath) {
@@ -31,4 +33,30 @@ std::string addFileNameAtEnd(std::string folderPath, std::string fileNameNoExten
         folderPath += PathDivider;
     }
     return folderPath + fileNameNoExtention + '.' + extention;
+}
+
+/*
+    名前が'.', '..'のファイルがなぜか混じります気をつけて
+ */
+void enumerateFilesIn(std::string folderPath, std::vector<std::string>& out) {
+    #ifdef _WIN32
+    // 実装してください
+    #elif __APPLE__
+    if (folderPath.back() != PathDivider) {
+        folderPath += PathDivider;
+    }
+
+    auto dir = opendir(folderPath.c_str());
+    if (dir == NULL) return;
+
+    dirent* dent;
+    do {
+        dent = readdir(dir);
+        if (dent != NULL) {
+            out.push_back(folderPath + dent->d_name);
+        }
+    } while(dent != NULL);
+
+    closedir(dir);
+    #endif
 }

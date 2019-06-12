@@ -10,6 +10,7 @@
 #include "solver.h"
 #include "test.h"
 #include "converter.h"
+#include "util.h"
 
 void doReversi() {
 	int AlphabetToNumber[1 << 8];
@@ -107,38 +108,32 @@ void doAutoPlay() {
 }
 
 void doThorConversion() {
-	int N;
-	std::cout << "Enter the number of thor database files:";
-	std::cin >> N;
-	std::cout << "Enter each file path:";
-	std::vector<std::string> paths(N);
-	for (int i = 0; i < N; ++i) {
-		std::cin >> paths[i];
-	}
-	std::string output;
-	std::cout << "Enter an output folder path:";
-	std::cin >> output;
+	std::vector<std::string> databaseFilePaths;
+	std::string databaseFolderPath, outputFolderPath;
 
-	convertThorDatabaseToRecodeFiles(paths, output);
+	std::cout << "Enter a folder path that includes Thor database files:";
+	std::cin >> databaseFolderPath;
+	std::cout << "Enter an output folder path:";
+	std::cin >> outputFolderPath;
+
+	enumerateFilesIn(databaseFolderPath, databaseFilePaths);
+	convertThorDatabaseToRecodeFiles(databaseFilePaths, outputFolderPath);
 
 	std::cout << "Done!" << std::endl;
 }
 
 void doGGFConversion() {
-	int N;
-	std::string outputFolderPath;
-	std::cout << "Enter the number of GGF database files:";
-	std::cin >> N;
-	std::vector<std::string> databaseFilePaths(N);
-	std::cout << "Enter each file path:";
-	for (int i = 0; i < N; ++i) {
-		std::cin >> databaseFilePaths[i];
-	}
-	
+	std::string databaseFolderPath, outputFolderPath;
+	std::vector<std::string> databaseFilePaths;
+
+	std::cout << "Enter a folder path that includes GGF database files:";
+	std::cin >> databaseFolderPath;
 	std::cout << "Enter an output folder path:";
 	std::cin >> outputFolderPath;
 
+	enumerateFilesIn(databaseFolderPath, databaseFilePaths);
 	convertGGFDatabaseToRecords(databaseFilePaths, outputFolderPath);
+
 	std::cout << "Done!" << std::endl;
 }
 
