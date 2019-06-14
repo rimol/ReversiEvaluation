@@ -8,7 +8,7 @@ enum Color { Black, White };
 constexpr Color operator ~(Color c) { return (Color)(c ^ 1); }
 std::istream& operator >> (std::istream& is, Color& c);
 
-typedef unsigned long long Bitboard;
+using Bitboard = unsigned long long;
 
 // CPU命令は使わずに実装する.
 
