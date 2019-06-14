@@ -12,6 +12,5 @@ struct Solution {
     int NPS() const { return nodeCount / scoreLockTime * 1000; }
 };
 
-// pからみた最終石差を計算
 Solution solve(Bitboard p, Bitboard o);
 void ffotest();
