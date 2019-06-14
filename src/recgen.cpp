@@ -7,7 +7,7 @@
 #include "engine.h"
 #include "bitboard.h"
 #include "recgen.h"
-#include "recode.h"
+#include "record.h"
 #include "reversi.h"
 #include "solver.h"
 #include "util.h"
@@ -17,7 +17,7 @@ struct RecgenPosition {
     Color c;
 };
 
-void generateRecode(int n, int depth, std::string folderPath) {
+void generateRecord(int n, int depth, std::string folderPath) {
     // 指定されたフォルダに保存用フォルダを作成
     // フォルダ名は現在時刻
     folderPath = createCurrentTimeFolderIn(folderPath);
@@ -67,11 +67,11 @@ void generateRecode(int n, int depth, std::string folderPath) {
         if (errorOccured) continue;
 
         for (int i = 0; i < 60; ++i) {
-            Recode recode(moves[i].p, moves[i].o, solution.bestScore);
+            Record record(moves[i].p, moves[i].o, solution.bestScore);
             
-            if (moves[i].c != solverColor) recode.result *= -1;
+            if (moves[i].c != solverColor) record.result *= -1;
 
-            ofss[i].write((char*)&recode, sizeof(Recode));
+            ofss[i].write((char*)&record, sizeof(Record));
         }
     }
 }

@@ -64,29 +64,29 @@ void doReversi() {
 void doRecGen() {
 	int n, depth;
 	std::string folderPath;
-	std::cout << "Specify the number of recodes you want to generate:";
+	std::cout << "Specify the number of records you want to generate:";
 	std::cin >> n;
 	std::cout << "Specify a depth of the exact play:";
 	std::cin >> depth;
 	std::cout << "Enter a folder path where you want to create the save folder:";
 	std::cin >> folderPath;
 
-	generateRecode(n, depth, folderPath);
+	generateRecord(n, depth, folderPath);
 
 	std::cout << "Done!\n";
 }
 
 void doEvalGen() {
-	std::string recodesFolderPath, outputFolderPath;
+	std::string recordsFolderPath, outputFolderPath;
 	double beta;
-	std::cout << "Enter a folder path where recodes are stored:";
-	std::cin >> recodesFolderPath;
+	std::cout << "Enter a folder path where records are stored:";
+	std::cin >> recordsFolderPath;
 	std::cout << "Enter a folder path where you want to save the data:";
 	std::cin >> outputFolderPath;
 	std::cout << "Enter the value of beta(this will determine the step size):";
 	std::cin >> beta;
 
-	generateEvaluationFiles(recodesFolderPath, outputFolderPath, beta);
+	generateEvaluationFiles(recordsFolderPath, outputFolderPath, beta);
 
 	std::cout << "Done!" << std::endl;
 }
@@ -117,7 +117,7 @@ void doThorConversion() {
 	std::cin >> outputFolderPath;
 
 	enumerateFilesIn(databaseFolderPath, databaseFilePaths);
-	convertThorDatabaseToRecodeFiles(databaseFilePaths, outputFolderPath);
+	convertThorDatabaseToRecordFiles(databaseFilePaths, outputFolderPath);
 
 	std::cout << "Done!" << std::endl;
 }
@@ -139,9 +139,9 @@ void doGGFConversion() {
 
 void doRecordMerge() {
 	std::string folderPath0, folderPath1;
-	std::cout << "Enter a folder path where recodes are stored:";
+	std::cout << "Enter a folder path where records are stored:";
 	std::cin >> folderPath0;
-	std::cout << "Enter another folder path where recodes are stored:";
+	std::cout << "Enter another folder path where records are stored:";
 	std::cin >> folderPath1;
 	
 	mergeRecordFiles(folderPath0, folderPath1);

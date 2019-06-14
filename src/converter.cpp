@@ -1,18 +1,18 @@
 #include <cassert>
 #include <cctype>
 #include <fstream>
-#include "recode.h"
+#include "record.h"
 #include "reversi.h"
 #include "converter.h"
 #include "util.h"
 
-void convertThorDatabaseToRecodeFiles(const std::vector<std::string> &thorDatabasePaths, std::string outputFolderPath) {
+void convertThorDatabaseToRecordFiles(const std::vector<std::string> &thorDatabasePaths, std::string outputFolderPath) {
     std::ofstream ofss[60];
     for (int i = 0; i < 60; ++i) {
         ofss[i] = std::ofstream(addFileNameAtEnd(outputFolderPath, std::to_string(i + 1), "bin"), std::ios::binary);
     }
 
-    int totalRecodeNum = 0;
+    int totalRecordNum = 0;
 
     for (auto path : thorDatabasePaths) {
         std::ifstream ifs(path, std::ios::ate | std::ios::binary);
@@ -23,7 +23,7 @@ void convertThorDatabaseToRecodeFiles(const std::vector<std::string> &thorDataba
         // databaseに入っている試合数を割り出す
         const int M = ((int)ifs.tellg() - 16) / sizeof(Thor);
         std::vector<Thor> database(M);
-        totalRecodeNum += M;
+        totalRecordNum += M;
         // ヘッダーの16バイトを飛ばす
         ifs.seekg(16);
         ifs.read((char*)&database[0], M * sizeof(Thor));
@@ -44,19 +44,19 @@ void convertThorDatabaseToRecodeFiles(const std::vector<std::string> &thorDataba
                     break;
                 } 
 
-                Recode recode(reversi.p, reversi.o, result);
+                Record record(reversi.p, reversi.o, result);
 
                 // 黒目線なので必要があればひっくり返す。
                 if (reversi.c == White) {
-                    recode.result *= -1;
+                    record.result *= -1;
                 }
 
-                ofss[i].write((char*)&recode, sizeof(Recode));
+                ofss[i].write((char*)&record, sizeof(Record));
             }
         }
     }
 
-    std::cout << "Total: " << totalRecodeNum << " recodes were converted!" << std::endl;
+    std::cout << "Total: " << totalRecordNum << " records were converted!" << std::endl;
 }
 
 class StringWithCursor {
@@ -164,14 +164,14 @@ void convertGGFToRecordsAndWrite(const std::string& gameResultString, std::ofstr
     }
 
     for (int i = 0; i < pastPos.size(); ++i) {
-        Recode record(
+        Record record(
             pastPos[i].p,
             pastPos[i].o,
             pastPos[i].c == reversi.c
                 ? popcount(reversi.p) - popcount(reversi.o)
                 : popcount(reversi.o) - popcount(reversi.p));
 
-        ofss[i].write((char*)&record, sizeof(Recode));
+        ofss[i].write((char*)&record, sizeof(Record));
     }
 }
 
@@ -230,11 +230,11 @@ void mergeRecordFiles(std::string folderPath0, std::string folderPath1) {
         if (!ifs.is_open()) continue;
         if (!ofs.is_open()) continue;
 
-        const int RecordNum = ifs.tellg() / sizeof(Recode);
+        const int RecordNum = ifs.tellg() / sizeof(Record);
         ifs.seekg(0);
 
-        std::vector<Recode> tmp(RecordNum);
-        ifs.read((char*)&tmp[0], RecordNum * sizeof(Recode));
-        ofs.write((char*)&tmp[0], RecordNum * sizeof(Recode));
+        std::vector<Record> tmp(RecordNum);
+        ifs.read((char*)&tmp[0], RecordNum * sizeof(Record));
+        ofs.write((char*)&tmp[0], RecordNum * sizeof(Record));
     }
 }

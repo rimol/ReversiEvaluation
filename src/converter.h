@@ -16,6 +16,6 @@ struct Thor
     int8_t moves[60];
 };
 
-void convertThorDatabaseToRecodeFiles(const std::vector<std::string> &thorDatabasePaths, std::string outputFolderPath);
+void convertThorDatabaseToRecordFiles(const std::vector<std::string> &thorDatabasePaths, std::string outputFolderPath);
 void convertGGFDatabaseToRecords(const std::vector<std::string> &ggfDatabasePaths, std::string outputFolderPath);
 void mergeRecordFiles(std::string folderPath0, std::string folderPath1);
