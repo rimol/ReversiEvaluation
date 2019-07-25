@@ -11,7 +11,7 @@ struct Thor {
     int16_t _, __, ___;
     int8_t ____;
     // 神
-    int8_t blackStoneCount;
+    int8_t _____;
     int8_t moves[60];
 };
 
