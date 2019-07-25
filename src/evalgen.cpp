@@ -1,32 +1,32 @@
+#include "evalgen.h"
+#include "bitboard.h"
+#include "eval.h"
+#include "record.h"
+#include "util.h"
 #include <algorithm>
 #include <cmath>
-#include <vector>
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <time.h>
-#include "bitboard.h"
-#include "record.h"
-#include "eval.h"
-#include "evalgen.h"
-#include "util.h"
+#include <vector>
 
-#define FOREACH_FEATURE_VALUE(Statement) \
-for (int i = 0; i < GroupNum; ++i) { \
-    for (int j = 0; j < EvalArrayLength; ++j) { \
-        auto& fv = featureValues[i][j]; \
-        Statement \
-    } \
-} \
+#define FOREACH_FEATURE_VALUE(Statement)            \
+    for (int i = 0; i < GroupNum; ++i) {            \
+        for (int j = 0; j < EvalArrayLength; ++j) { \
+            auto &fv = featureValues[i][j];         \
+            Statement                               \
+        }                                           \
+    }
 
-#define FOREACH_FEATURE_IN(_recordEx, Statement) \
-for (int i = 0; i < FeatureNum; ++i) { \
-    int _g = Feature.group[i]; \
-    Bitboard _p = (_recordEx).playerRotatedBB[Feature.rotationType[i]]; \
-    Bitboard _o = (_recordEx).opponentRotatedBB[Feature.rotationType[i]]; \
-    auto& fv = featureValues[_g][extract(_p, _o, _g)]; \
-    Statement \
-} \
+#define FOREACH_FEATURE_IN(_recordEx, Statement)                              \
+    for (int i = 0; i < FeatureNum; ++i) {                                    \
+        int _g = Feature.group[i];                                            \
+        Bitboard _p = (_recordEx).playerRotatedBB[Feature.rotationType[i]];   \
+        Bitboard _o = (_recordEx).opponentRotatedBB[Feature.rotationType[i]]; \
+        auto &fv = featureValues[_g][extract(_p, _o, _g)];                    \
+        Statement                                                             \
+    }
 
 // 各特徴の評価値、評価値の更新分、ステップサイズをまとめて持つ
 struct FeatureValue {
@@ -48,12 +48,12 @@ static double interceptUpdate;
 static double stepSize2;
 
 static void fillAllArraysAndVarialblesWithZero() {
-    std::fill((FeatureValue*)featureValues, (FeatureValue*)(featureValues + GroupNum), FeatureValue());
+    std::fill((FeatureValue *)featureValues, (FeatureValue *)(featureValues + GroupNum), FeatureValue());
     mobilityWeight = mobilityUpdate = intercept = interceptUpdate = stepSize2 = 0.0;
 }
 
 // y - e
-static double evalLoss(const RecordEx& recordEx) {
+static double evalLoss(const RecordEx &recordEx) {
     double e = intercept;
 
     FOREACH_FEATURE_IN(recordEx, { e += fv.evalValue; })
@@ -65,8 +65,7 @@ static double evalLoss(const RecordEx& recordEx) {
 static void applyUpdatesOfEvalValues() {
     FOREACH_FEATURE_VALUE(
         fv.evalValue += fv.evalValueUpdate * fv.stepSize;
-        fv.evalValueUpdate = 0.0;
-    )
+        fv.evalValueUpdate = 0.0;)
 
     mobilityWeight += mobilityUpdate * stepSize2;
     intercept += interceptUpdate * stepSize2;
@@ -94,26 +93,25 @@ static double calculateEvaluationValue(std::string recordFilePath, double beta) 
     // 一つ一つ変換しながら読み込む
     for (int i = 0; i < M; ++i) {
         Record rec;
-        ifs.read((char*)&rec, sizeof(Record));
+        ifs.read((char *)&rec, sizeof(Record));
         records[i] = RecordEx(rec);
     }
 
     // 予め各特徴のステップサイズを計算しておく。
-    for (const auto& recordEx : records) {
+    for (const auto &recordEx : records) {
         FOREACH_FEATURE_IN(recordEx, { ++fv.stepSize; })
     }
 
     FOREACH_FEATURE_VALUE(
-        fv.stepSize = std::min(beta / 50.0, beta / fv.stepSize);
-    )
+        fv.stepSize = std::min(beta / 50.0, beta / fv.stepSize);)
 
     double prevSquaredLossSum = 0.0;
     long long loopCounter = 0;
     // ピピーーッ！無限ループ！！逮捕！！
-    while(true) {
+    while (true) {
         // 偏差の2乗の和
         double squaredLossSum = 0;
-        for (const auto& recordEx : records) {
+        for (const auto &recordEx : records) {
             // 残差
             double loss = evalLoss(recordEx);
             squaredLossSum += loss * loss;
@@ -161,9 +159,8 @@ void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFo
         std::ofstream ofs(addFileNameAtEnd(outputFolderPath, std::to_string(i), "bin"), std::ios::binary);
         // 評価値のみ保存したいので仕方なしループ
         FOREACH_FEATURE_VALUE(
-            ofs.write((char*)&fv.evalValue, sizeof(double));
-        )
-        ofs.write((char*)&mobilityWeight, sizeof(double));
-        ofs.write((char*)&intercept, sizeof(double));
+            ofs.write((char *)&fv.evalValue, sizeof(double));)
+        ofs.write((char *)&mobilityWeight, sizeof(double));
+        ofs.write((char *)&intercept, sizeof(double));
     }
 }

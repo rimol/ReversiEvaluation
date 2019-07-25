@@ -236,6 +236,7 @@ void findBestMoves(Bitboard p, Bitboard o, bool passed, int bestScore, std::vect
 }
 
 Solution solve(Bitboard p, Bitboard o) {
+    // 置換表初期化した方がよい？ std::fill(transpositionTable, transpositionTable + 0x200000, SearchedPosition());
     Solution solution;
     nodeCount = 0;
 

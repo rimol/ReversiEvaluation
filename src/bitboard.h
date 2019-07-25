@@ -1,12 +1,19 @@
 #pragma once
 
 #include <iostream>
-#include <immintrin.h>
 #include <stdint.h>
 
-enum Color { Black, White };
-constexpr Color operator ~(Color c) { return (Color)(c ^ 1); }
-std::istream& operator >> (std::istream& is, Color& c);
+#ifndef __EMSCRIPTEN__
+#include <immintrin.h>
+#endif
+
+enum Color {
+    Black,
+    White
+};
+
+constexpr Color operator~(Color c) { return (Color)(c ^ 1); }
+std::istream &operator>>(std::istream &is, Color &c);
 
 using Bitboard = unsigned long long;
 
@@ -25,6 +32,7 @@ using Bitboard = unsigned long long;
 7  15 14 13 12 11 10 09 08
 8  07 06 05 04 03 02 01 00 <- 0ビット目
 
+これ逆の方がいいんじゃ...（）
 */
 
 // 立っているビットの数を数える
@@ -43,17 +51,18 @@ inline Bitboard tzcnt(Bitboard x) {
 }
 
 inline Bitboard pext(Bitboard x, Bitboard mask) {
-    /*
-    maskで立っているビットの数は8に限定しています
+#ifdef __EMSCRIPTEN__
     Bitboard extracted = 0ULL;
-    for (Bitboard i = 1ULL; i < (1ULL << MaxFocusedSquareCount); i <<= 1) {
+    for (Bitboard i = 1ULL; mask != 0ULL; i <<= 1) {
         Bitboard lb = mask & -mask;
-        if (x & lb) extracted |= i;
         mask ^= lb;
+        if (x & lb)
+            extracted |= i;
     }
     return extracted;
-    */
+#else
     return _pext_u64(x, mask);
+#endif
 }
 
 // コピペ
@@ -72,7 +81,7 @@ constexpr Bitboard rotateBy180(Bitboard x) {
     x = (x >> 4 & 0x0f0f0f0f0f0f0f0fULL) | (x << 4 & 0xf0f0f0f0f0f0f0f0ULL);
     x = (x >> 2 & 0x3333333333333333ULL) | (x << 2 & 0xccccccccccccccccULL);
     return (x >> 1 & 0x5555555555555555ULL) | (x << 1 & 0xaaaaaaaaaaaaaaaaULL);
-} 
+}
 
 // ビットボードを右に90°回転させる.
 // 対角線A8H1を軸に盤面を反転させて、1, 2, 3, ..., 8列を反転させて8, 7, 6, ..., 1列にすればよい
@@ -115,11 +124,11 @@ constexpr Bitboard rotateRightBy90(Bitboard x) {
     0000 0000
     0101 0101
     */
-   x = delta_swap(x, 0x0055005500550055ULL, 9);
-   // 横列反転
-   x = x >> 32 | x << 32;
-   x = (x >> 16 & 0x0000ffff0000ffffULL) | (x & 0x0000ffff0000ffffULL) << 16;
-   return (x >> 8 & 0x00ff00ff00ff00ffULL) | (x & 0x00ff00ff00ff00ffULL) << 8;
+    x = delta_swap(x, 0x0055005500550055ULL, 9);
+    // 横列反転
+    x = x >> 32 | x << 32;
+    x = (x >> 16 & 0x0000ffff0000ffffULL) | (x & 0x0000ffff0000ffffULL) << 16;
+    return (x >> 8 & 0x00ff00ff00ff00ffULL) | (x & 0x00ff00ff00ff00ffULL) << 8;
 }
 
 // 打てるマスのビットを立てる

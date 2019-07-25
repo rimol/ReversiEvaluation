@@ -6,8 +6,7 @@
 #include <vector>
 
 // 終盤は完璧な手を打っている棋譜であると仮定しときます。
-struct Thor
-{
+struct Thor {
     // ゴミ
     int16_t _, __, ___;
     int8_t ____;
