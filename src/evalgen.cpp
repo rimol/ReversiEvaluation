@@ -119,7 +119,7 @@ static double calculateEvaluationValue(std::string recordFilePath, double beta) 
             FOREACH_FEATURE_IN(recordEx, { fv.evalValueUpdate += loss; })
 
             // mobility
-            mobilityUpdate += loss * getMobility(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]);
+            mobilityUpdate += loss * (double)getMobility(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]);
             interceptUpdate += loss;
         }
 
@@ -150,7 +150,7 @@ void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFo
     std::ofstream vofs(addFileNameAtEnd(outputFolderPath, "variance", "txt"));
 
     // (1-60).binについてそれぞれ計算→保存
-    for (int i = 60; i >= 1; --i) {
+    for (int i = 42; i >= 1; --i) {
         // ファイルパスを渡して計算させる
         double variance = calculateEvaluationValue(addFileNameAtEnd(recordsFolderPath, std::to_string(i), "bin"), beta);
         // 保存～
