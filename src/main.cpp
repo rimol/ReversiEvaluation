@@ -148,8 +148,8 @@ void doRecordMerge() {
 }
 
 int main() {
-    test();
-
+    initSymmetricPattern();
+    // test();
     while (true) {
         std::cout << "Enter a command:";
         std::string command;

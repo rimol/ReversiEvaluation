@@ -14,7 +14,7 @@ constexpr Bitboard makeBB(const int (&bits)[8]) {
     return bb;
 }
 
-int toBase10(std::string s) {
+int base3Tobase10(std::string s) {
     int x = 0;
     for (int i = 0; i < s.size(); ++i) {
         x += s[i] - '0';
@@ -390,11 +390,82 @@ void test() {
                 0b10000000,
             })));
 
+    // SymmetricPattern
+    assert(SymmetricPattern[0][base3Tobase10("2221011111")] == base3Tobase10("1111101222"));
+    assert(SymmetricPattern[0][base3Tobase10("2211011101")] == base3Tobase10("1101101212"));
+    assert(SymmetricPattern[0][base3Tobase10("0122112120")] == base3Tobase10("0122112120"));
+    assert(SymmetricPattern[0][base3Tobase10("0211111101")] == base3Tobase10("0211111101"));
+    assert(SymmetricPattern[0][base3Tobase10("0000000000")] == base3Tobase10("0000000000"));
+    assert(SymmetricPattern[0][base3Tobase10("1111111111")] == base3Tobase10("1111111111"));
+    assert(SymmetricPattern[0][base3Tobase10("2222222222")] == base3Tobase10("2222222222"));
+
+    assert(SymmetricPattern[1][base3Tobase10("22222211")] == base3Tobase10("11222222"));
+    assert(SymmetricPattern[1][base3Tobase10("11222222")] == base3Tobase10("11222222"));
+    assert(SymmetricPattern[1][base3Tobase10("11222211")] == base3Tobase10("11222211"));
+    assert(SymmetricPattern[1][base3Tobase10("02121210")] == base3Tobase10("01212120"));
+    assert(SymmetricPattern[1][base3Tobase10("00000000")] == base3Tobase10("00000000"));
+    assert(SymmetricPattern[1][base3Tobase10("11111111")] == base3Tobase10("11111111"));
+    assert(SymmetricPattern[1][base3Tobase10("22222222")] == base3Tobase10("22222222"));
+
+    assert(SymmetricPattern[4][base3Tobase10("212122201")] == base3Tobase10("122021212"));
+    assert(SymmetricPattern[4][base3Tobase10("200120112")] == base3Tobase10("200120112"));
+    assert(SymmetricPattern[4][base3Tobase10("101010102")] == base3Tobase10("101010102"));
+    assert(SymmetricPattern[4][base3Tobase10("000000000")] == base3Tobase10("000000000"));
+    assert(SymmetricPattern[4][base3Tobase10("111111111")] == base3Tobase10("111111111"));
+    assert(SymmetricPattern[4][base3Tobase10("222222222")] == base3Tobase10("222222222"));
+
+    assert(SymmetricPattern[5][base3Tobase10("22221111")] == base3Tobase10("11112222"));
+    assert(SymmetricPattern[5][base3Tobase10("11112222")] == base3Tobase10("11112222"));
+    assert(SymmetricPattern[5][base3Tobase10("10222201")] == base3Tobase10("10222201"));
+    assert(SymmetricPattern[5][base3Tobase10("02121210")] == base3Tobase10("01212120"));
+    assert(SymmetricPattern[5][base3Tobase10("00000000")] == base3Tobase10("00000000"));
+    assert(SymmetricPattern[5][base3Tobase10("11111111")] == base3Tobase10("11111111"));
+    assert(SymmetricPattern[5][base3Tobase10("22222222")] == base3Tobase10("22222222"));
+
+    assert(SymmetricPattern[9][base3Tobase10("2120")] == base3Tobase10("0212"));
+    assert(SymmetricPattern[9][base3Tobase10("1202")] == base3Tobase10("1202"));
+    assert(SymmetricPattern[9][base3Tobase10("2002")] == base3Tobase10("2002"));
+    assert(SymmetricPattern[9][base3Tobase10("0210")] == base3Tobase10("0120"));
+    assert(SymmetricPattern[9][base3Tobase10("0000")] == base3Tobase10("0000"));
+    assert(SymmetricPattern[9][base3Tobase10("1111")] == base3Tobase10("1111"));
+    assert(SymmetricPattern[9][base3Tobase10("2222")] == base3Tobase10("2222"));
+
+    assert(SymmetricPattern[10][base3Tobase10("2012010201")] == base3Tobase10("2012010201"));
+    assert(SymmetricPattern[10][base3Tobase10("1021020122")] == base3Tobase10("1021020122"));
+    assert(SymmetricPattern[10][base3Tobase10("2122212222")] == base3Tobase10("2122212222"));
+    assert(SymmetricPattern[10][base3Tobase10("1100001000")] == base3Tobase10("1100001000"));
+    assert(SymmetricPattern[10][base3Tobase10("0000000000")] == base3Tobase10("0000000000"));
+    assert(SymmetricPattern[10][base3Tobase10("1111111111")] == base3Tobase10("1111111111"));
+    assert(SymmetricPattern[10][base3Tobase10("2222222222")] == base3Tobase10("2222222222"));
+
     // extract
     assert(extract(
                makeBB({
-                   0b10001010,
-                   0b01000000,
+                   0b00000001,
+                   0b00000010,
+                   0b00000000,
+                   0b00000000,
+                   0b00000001,
+                   0b00000000,
+                   0b00000001,
+                   0b00000000,
+               }),
+               makeBB({
+                   0b00000000,
+                   0b00000001,
+                   0b00000000,
+                   0b00000001,
+                   0b00000000,
+                   0b00000001,
+                   0b00000010,
+                   0b00000000,
+               }),
+               0) == base3Tobase10("0212120121"));
+
+    assert(extract(
+               makeBB({
+                   0b00000000,
+                   0b00000000,
                    0b00000000,
                    0b00000000,
                    0b00000000,
@@ -403,154 +474,131 @@ void test() {
                    0b00000000,
                }),
                makeBB({
-                   0b01010100,
+                   0b00000001,
+                   0b00000011,
+                   0b00000001,
+                   0b00000001,
+                   0b00000001,
+                   0b00000001,
+                   0b00000011,
+                   0b00000001,
+               }),
+               0) == base3Tobase10("2222222222"));
+
+    assert(extract(
+               makeBB({
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+               }),
+               makeBB({
+                   0b00000010,
+                   0b00000010,
+                   0b00000010,
+                   0b00000010,
+                   0b00000010,
+                   0b00000010,
+                   0b00000010,
+                   0b00000010,
+               }),
+               1) == base3Tobase10("22222222"));
+
+    assert(extract(
+               makeBB({
+                   0b00000010,
+                   0b00000001,
+                   0b00000100,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+               }),
+               makeBB({
+                   0b00000001,
+                   0b00000100,
                    0b00000010,
                    0b00000000,
                    0b00000000,
                    0b00000000,
                    0b00000000,
                    0b00000000,
-                   0b00000000,
                }),
-               0) == toBase10("1202121012"));
+               4) == base3Tobase10("012201120"));
 
     assert(extract(
                makeBB({
                    0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-               }),
-               makeBB({
-                   0b11111111,
-                   0b01000010,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-               }),
-               0) == toBase10("2222222222"));
-
-    assert(extract(
-               makeBB({
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-               }),
-               makeBB({
-                   0b00000000,
-                   0b11111111,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-               }),
-               1) == toBase10("22222222"));
-
-    assert(extract(
-               makeBB({
-                   0b01000000,
                    0b10000000,
+                   0b01000000,
                    0b00100000,
+                   0b00010000,
                    0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
+                   0b00000100,
                    0b00000000,
                }),
                makeBB({
-                   0b10000000,
-                   0b00100000,
-                   0b01000000,
                    0b00000000,
                    0b00000000,
                    0b00000000,
                    0b00000000,
                    0b00000000,
+                   0b00001000,
+                   0b00000000,
+                   0b00000010,
                }),
-               4) == toBase10("210102021"));
+               6) == base3Tobase10("1111212"));
 
     assert(extract(
                makeBB({
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+               }),
+               makeBB({
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b10000000,
+                   0b01000000,
+                   0b00100000,
+                   0b00010000,
+               }),
+               9) == base3Tobase10("2222"));
+
+    assert(extract(
+               makeBB({
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000100,
+                   0b00000001,
+               }),
+               makeBB({
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
+                   0b00000000,
                    0b00000010,
                    0b00000100,
-                   0b00001000,
-                   0b00010000,
-                   0b00000000,
-                   0b01000000,
-                   0b00000000,
-                   0b00000000,
                }),
-               makeBB({
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00100000,
-                   0b00000000,
-                   0b10000000,
-                   0b00000000,
-               }),
-               6) == toBase10("1111212"));
-
-    assert(extract(
-               makeBB({
-                   0b00010000,
-                   0b00100000,
-                   0b01000000,
-                   0b10000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-               }),
-               makeBB({
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-               }),
-               9) == toBase10("1111"));
-
-    assert(extract(
-               makeBB({
-                   0b00100000,
-                   0b00001000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-               }),
-               makeBB({
-                   0b00010000,
-                   0b00100000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-                   0b00000000,
-               }),
-               10) == toBase10("0012000201"));
+               10) == base3Tobase10("0012000201"));
     // getMoves, getFlip
 
     // テスト回数

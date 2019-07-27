@@ -45,7 +45,7 @@ constexpr Bitboard popcount(Bitboard x) {
 }
 
 // 一番下のビットが下から数えて何ビット目にあるか求める(0-indexed)
-inline Bitboard tzcnt(Bitboard x) {
+constexpr Bitboard tzcnt(Bitboard x) {
     // return popcount(~x & x - 1ULL);
     return __builtin_ctzll(x);
 }
@@ -73,6 +73,12 @@ constexpr Bitboard delta_swap(Bitboard x, Bitboard mask, int delta) {
     return t ^ (t << delta) ^ x;
 }
 
+constexpr Bitboard flipVertical(Bitboard x) {
+    x = x >> 32 | x << 32;
+    x = (x >> 16 & 0x0000ffff0000ffffULL) | (x & 0x0000ffff0000ffffULL) << 16;
+    return (x >> 8 & 0x00ff00ff00ff00ffULL) | (x & 0x00ff00ff00ff00ffULL) << 8;
+}
+
 // ビット列を逆転する。 ex) 1010 -> 0101
 constexpr Bitboard rotateBy180(Bitboard x) {
     x = (x >> 32) | (x << 32);
@@ -83,9 +89,7 @@ constexpr Bitboard rotateBy180(Bitboard x) {
     return (x >> 1 & 0x5555555555555555ULL) | (x << 1 & 0xaaaaaaaaaaaaaaaaULL);
 }
 
-// ビットボードを右に90°回転させる.
-// 対角線A8H1を軸に盤面を反転させて、1, 2, 3, ..., 8列を反転させて8, 7, 6, ..., 1列にすればよい
-constexpr Bitboard rotateRightBy90(Bitboard x) {
+constexpr Bitboard flipDiagonalA8H1(Bitboard x) {
     /*
     0x000000000f0f0f0f = 
     0000 0000
@@ -124,11 +128,13 @@ constexpr Bitboard rotateRightBy90(Bitboard x) {
     0000 0000
     0101 0101
     */
-    x = delta_swap(x, 0x0055005500550055ULL, 9);
-    // 横列反転
-    x = x >> 32 | x << 32;
-    x = (x >> 16 & 0x0000ffff0000ffffULL) | (x & 0x0000ffff0000ffffULL) << 16;
-    return (x >> 8 & 0x00ff00ff00ff00ffULL) | (x & 0x00ff00ff00ff00ffULL) << 8;
+    return delta_swap(x, 0x0055005500550055ULL, 9);
+}
+
+// ビットボードを右に90°回転させる.
+// 対角線A8H1を軸に盤面を反転させて、1, 2, 3, ..., 8列を反転させて8, 7, 6, ..., 1列にすればよい
+constexpr Bitboard rotateRightBy90(Bitboard x) {
+    return flipVertical(flipDiagonalA8H1(x));
 }
 
 // 打てるマスのビットを立てる
@@ -275,6 +281,16 @@ inline Bitboard getFlip(Bitboard p, Bitboard o, Bitboard sqbit) {
 
 inline int getMobility(Bitboard p, Bitboard o) {
     return popcount(getMoves(p, o));
+}
+
+inline void rotateAndFlipBB(Bitboard x, Bitboard (&out)[8]) {
+    out[0] = x;
+    out[1] = rotateRightBy90(x);
+    out[2] = rotateBy180(x);
+    out[3] = rotateRightBy90(out[2]);
+    for (int i = 0; i < 4; ++i) {
+        out[i + 4] = flipVertical(out[i]);
+    }
 }
 
 // 愚直実装ばーじょん

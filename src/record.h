@@ -12,14 +12,14 @@ struct Record {
 
 // 回転したビットボードもあらかじめ持つ
 struct RecordEx {
-    Bitboard playerRotatedBB[4];
-    Bitboard opponentRotatedBB[4];
+    Bitboard playerRotatedBB[8];
+    Bitboard opponentRotatedBB[8];
     int result;
 
     RecordEx() {}
 
-    RecordEx(Record record)
-        : playerRotatedBB{record.p, rotateRightBy90(record.p), rotateBy180(record.p), rotateRightBy90(rotateBy180(record.p))},
-          opponentRotatedBB{record.o, rotateRightBy90(record.o), rotateBy180(record.o), rotateRightBy90(rotateBy180(record.o))},
-          result(record.result) {}
+    RecordEx(Record record) : result(record.result) {
+        rotateAndFlipBB(record.p, playerRotatedBB);
+        rotateAndFlipBB(record.o, opponentRotatedBB);
+    }
 };
