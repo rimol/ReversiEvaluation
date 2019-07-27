@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 int SymmetricPattern[GroupNum][EvalArrayLength];
 void initSymmetricPattern() {
@@ -26,18 +27,15 @@ void initSymmetricPattern() {
             for (int j = 0; j < integerPow(3, popcount(Feature.masks[i])); ++j) {
                 int k = j;
                 Bitboard m = Feature.masks[i];
-                std::pair<int, int> digits[MaxFocusedSquareCount];
-                std::pair<int, int> *last = digits;
+                std::vector<std::pair<int, int>> digits;
                 while (m != 0ULL) {
-                    (*last).first = flipSQ[flipType][tzcnt(m)];
-                    (*last).second = k % 3;
+                    digits.push_back({flipSQ[flipType][tzcnt(m)], k % 3});
                     k /= 3;
                     m &= m - 1ULL;
-                    ++last;
                 }
-                std::sort(digits, last, std::greater<std::pair<int, int>>());
+                std::sort(digits.begin(), digits.end(), std::greater<std::pair<int, int>>());
                 int l = 0;
-                for (int i = 0; i < (last - digits); ++i) {
+                for (int i = 0; i < digits.size(); ++i) {
                     l *= 3;
                     l += digits[i].second;
                 }
