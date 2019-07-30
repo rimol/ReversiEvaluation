@@ -105,6 +105,9 @@ static double calculateEvaluationValue(std::string recordFilePath, double beta) 
     FOREACH_FEATURE_VALUE(
         fv.stepSize = std::min(beta / 50.0, beta / fv.stepSize);)
 
+    // これやるの忘れてたああああああああ
+    stepSize2 = beta / (double)M;
+
     double prevSquaredLossSum = 0.0;
     long long loopCounter = 0;
     // ピピーーッ！無限ループ！！逮捕！！
