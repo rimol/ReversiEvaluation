@@ -79,5 +79,5 @@ double evaluate(Bitboard p, Bitboard o) {
         e += evaluationValues[t][g][extract(p_, o_, g)];
     }
 
-    return e + (double)getMobility(p, o) * mobilityWeight[t];
+    return e + (double)mobilityDiff(p, o) * mobilityWeight[t];
 }

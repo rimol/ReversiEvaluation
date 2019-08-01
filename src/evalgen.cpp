@@ -47,22 +47,20 @@ static double interceptUpdate;
 // stepSizes[i][j] = min(beta/50, beta/(特徴ijが出現する回数));
 static double stepSize2;
 
-static void fillAllArraysAndVarialblesWithZero() {
+static inline void fillAllArraysAndVarialblesWithZero() {
     std::fill((FeatureValue *)featureValues, (FeatureValue *)(featureValues + GroupNum), FeatureValue());
     mobilityWeight = mobilityUpdate = intercept = interceptUpdate = stepSize2 = 0.0;
 }
 
 // y - e
-static double evalLoss(const RecordEx &recordEx) {
+static inline double evalLoss(const RecordEx &recordEx) {
     double e = intercept;
-
     FOREACH_FEATURE_IN(recordEx, { e += fv.evalValue; })
-
-    e += (double)getMobility(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]) * mobilityWeight;
+    e += (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]) * mobilityWeight;
     return (double)recordEx.result - e;
 }
 
-static void applyUpdatesOfEvalValues() {
+static inline void applyUpdatesOfEvalValues() {
     FOREACH_FEATURE_VALUE(
         fv.evalValue += fv.evalValueUpdate * fv.stepSize;
         fv.evalValueUpdate = 0.0;)
@@ -122,7 +120,7 @@ static double calculateEvaluationValue(std::string recordFilePath, double beta) 
             FOREACH_FEATURE_IN(recordEx, { fv.evalValueUpdate += loss; })
 
             // mobility
-            mobilityUpdate += loss * (double)getMobility(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]);
+            mobilityUpdate += loss * (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]);
             interceptUpdate += loss;
         }
 

@@ -283,6 +283,10 @@ inline int getMobility(Bitboard p, Bitboard o) {
     return popcount(getMoves(p, o));
 }
 
+inline int mobilityDiff(Bitboard p, Bitboard o) {
+    return getMobility(p, o) - getMobility(o, p);
+}
+
 inline void rotateAndFlipBB(Bitboard x, Bitboard (&out)[8]) {
     out[0] = x;
     out[1] = rotateRightBy90(x);
