@@ -36,27 +36,18 @@ struct FeatureValue {
 };
 
 static FeatureValue featureValues[GroupNum][EvalArrayLength];
-
-static double mobilityWeight;
-static double intercept;
-
-// 更新分の保存用
-static double mobilityUpdate;
-static double interceptUpdate;
-
-// stepSizes[i][j] = min(beta/50, beta/(特徴ijが出現する回数));
-static double stepSize2;
+static FeatureValue mobilityValue;
 
 static inline void fillAllArraysAndVarialblesWithZero() {
     std::fill((FeatureValue *)featureValues, (FeatureValue *)(featureValues + GroupNum), FeatureValue());
-    mobilityWeight = mobilityUpdate = intercept = interceptUpdate = stepSize2 = 0.0;
+    mobilityValue = FeatureValue();
 }
 
 // y - e
 static inline double evalLoss(const RecordEx &recordEx) {
-    double e = intercept;
+    double e = 0.0;
     FOREACH_FEATURE_IN(recordEx, { e += fv.evalValue; })
-    e += (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]) * mobilityWeight;
+    e += (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]) * mobilityValue.evalValue;
     return (double)recordEx.result - e;
 }
 
@@ -65,10 +56,9 @@ static inline void applyUpdatesOfEvalValues() {
         fv.evalValue += fv.evalValueUpdate * fv.stepSize;
         fv.evalValueUpdate = 0.0;)
 
-    mobilityWeight += mobilityUpdate * stepSize2;
-    intercept += interceptUpdate * stepSize2;
+    mobilityValue.evalValue += mobilityValue.evalValueUpdate * mobilityValue.stepSize;
 
-    mobilityUpdate = interceptUpdate = 0.0;
+    mobilityValue.evalValueUpdate = 0.0;
 }
 
 // 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
@@ -104,7 +94,7 @@ static double calculateEvaluationValue(std::string recordFilePath, double beta) 
         fv.stepSize = std::min(beta / 50.0, beta / fv.stepSize);)
 
     // これやるの忘れてたああああああああ
-    stepSize2 = beta / (double)M;
+    mobilityValue.stepSize = beta / (double)M;
 
     double prevSquaredLossSum = 0.0;
     long long loopCounter = 0;
@@ -120,8 +110,7 @@ static double calculateEvaluationValue(std::string recordFilePath, double beta) 
             FOREACH_FEATURE_IN(recordEx, { fv.evalValueUpdate += loss; })
 
             // mobility
-            mobilityUpdate += loss * (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]);
-            interceptUpdate += loss;
+            mobilityValue.evalValueUpdate += loss * (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]);
         }
 
         double currentVariance = squaredLossSum / (double)M;
@@ -161,7 +150,6 @@ void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFo
         // 評価値のみ保存したいので仕方なしループ
         FOREACH_FEATURE_VALUE(
             ofs.write((char *)&fv.evalValue, sizeof(double));)
-        ofs.write((char *)&mobilityWeight, sizeof(double));
-        ofs.write((char *)&intercept, sizeof(double));
+        ofs.write((char *)&mobilityValue.evalValue, sizeof(double));
     }
 }
