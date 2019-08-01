@@ -25,6 +25,21 @@ int base3Tobase10(std::string s) {
 }
 
 void test() {
+    // parity
+    assert(parity(0xffffffffffffffffULL) == -1);
+    assert(parity(0xffffffffefffffffULL) == 1);
+    assert(parity(0ULL) == -1);
+    assert(parity(0x0123456789abcdefULL) == -1);
+
+    // parity sum
+    assert(paritySum(0xffffffffffffffffULL) == -4);
+    assert(paritySum(0xffffffffefffffffULL) == -2);
+    assert(paritySum(0ULL) == -4);
+    assert(paritySum(0x8000000000000001ULL) == 0);
+    assert(paritySum(0x8800000000000010ULL) == 2);
+    assert(paritySum(0x8800000000000011ULL) == 4);
+    assert(paritySum(0x0123456789abcdefULL) == -4);
+
     // rotation
     assert(
         makeBB({

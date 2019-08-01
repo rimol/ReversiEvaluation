@@ -37,10 +37,16 @@ struct FeatureValue {
 
 static FeatureValue featureValues[GroupNum][EvalArrayLength];
 static FeatureValue mobilityValue;
+/*
+    盤面を縦横4分割して、その分割した盤面の1つに対して、空きマスの数が偶数なら-1、奇数なら1となる特徴.
+    偶数理論に対応するやつ. 終盤用の特徴になるはず. 序盤の精度が下がりそうで怖い（変に最適化されそうなので）
+*/
+static FeatureValue parityValue;
 
 static inline void fillAllArraysAndVarialblesWithZero() {
     std::fill((FeatureValue *)featureValues, (FeatureValue *)(featureValues + GroupNum), FeatureValue());
     mobilityValue = FeatureValue();
+    parityValue = FeatureValue();
 }
 
 // y - e
@@ -48,6 +54,7 @@ static inline double evalLoss(const RecordEx &recordEx) {
     double e = 0.0;
     FOREACH_FEATURE_IN(recordEx, { e += fv.evalValue; })
     e += (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]) * mobilityValue.evalValue;
+    e += (double)paritySum(recordEx.playerRotatedBB[0] | recordEx.opponentRotatedBB[0]) * parityValue.evalValue;
     return (double)recordEx.result - e;
 }
 
@@ -57,8 +64,9 @@ static inline void applyUpdatesOfEvalValues() {
         fv.evalValueUpdate = 0.0;)
 
     mobilityValue.evalValue += mobilityValue.evalValueUpdate * mobilityValue.stepSize;
+    parityValue.evalValue += parityValue.evalValueUpdate * parityValue.stepSize;
 
-    mobilityValue.evalValueUpdate = 0.0;
+    mobilityValue.evalValueUpdate = parityValue.evalValueUpdate = 0.0;
 }
 
 // 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
@@ -94,7 +102,7 @@ static double calculateEvaluationValue(std::string recordFilePath, double beta) 
         fv.stepSize = std::min(beta / 50.0, beta / fv.stepSize);)
 
     // これやるの忘れてたああああああああ
-    mobilityValue.stepSize = beta / (double)M;
+    mobilityValue.stepSize = parityValue.stepSize = beta / (double)M;
 
     double prevSquaredLossSum = 0.0;
     long long loopCounter = 0;
@@ -109,8 +117,8 @@ static double calculateEvaluationValue(std::string recordFilePath, double beta) 
             // このデータで出現する各特徴に対し更新分を加算していく
             FOREACH_FEATURE_IN(recordEx, { fv.evalValueUpdate += loss; })
 
-            // mobility
             mobilityValue.evalValueUpdate += loss * (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]);
+            parityValue.evalValueUpdate += loss * (double)paritySum(recordEx.playerRotatedBB[0] | recordEx.opponentRotatedBB[0]);
         }
 
         double currentVariance = squaredLossSum / (double)M;
@@ -118,7 +126,7 @@ static double calculateEvaluationValue(std::string recordFilePath, double beta) 
         // 終了条件わからん
         // 「前回との差がピッタリ0」を条件にすると終わらない
         // -> １局面あたりの変化（の二乗）がXを下回ったら終了する
-        constexpr double X = 10e-4;
+        constexpr double X = 10e-8;
         if (std::abs(squaredLossSum - prevSquaredLossSum) / (double)M < X) {
             std::cout << "Done. variance: " << currentVariance << ", loop: " << loopCounter << " times" << std::endl;
             return currentVariance;
@@ -151,5 +159,6 @@ void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFo
         FOREACH_FEATURE_VALUE(
             ofs.write((char *)&fv.evalValue, sizeof(double));)
         ofs.write((char *)&mobilityValue.evalValue, sizeof(double));
+        ofs.write((char *)&parityValue.evalValue, sizeof(double));
     }
 }

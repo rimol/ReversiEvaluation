@@ -32,8 +32,18 @@ using Bitboard = unsigned long long;
 7  15 14 13 12 11 10 09 08
 8  07 06 05 04 03 02 01 00 <- 0ビット目
 
+      Top
+<- Left Right ->
+     Bottom
+
 これ逆の方がいいんじゃ...（）
 */
+
+// ビットマスク
+constexpr Bitboard LeftTop = 0xf0f0f0f000000000ULL;
+constexpr Bitboard RightTop = 0x0f0f0f0f00000000ULL;
+constexpr Bitboard LeftBottom = 0x00000000f0f0f0f0ULL;
+constexpr Bitboard RightBottom = 0x000000000f0f0f0fULL;
 
 // 立っているビットの数を数える
 constexpr Bitboard popcount(Bitboard x) {
@@ -48,6 +58,20 @@ constexpr Bitboard popcount(Bitboard x) {
 constexpr Bitboard tzcnt(Bitboard x) {
     // return popcount(~x & x - 1ULL);
     return __builtin_ctzll(x);
+}
+
+// popcount % 2 == 0 ? -1 : 1. おそらくこっちの方がいいはず
+inline int parity(Bitboard x) {
+    x ^= x >> 32;
+    x ^= x >> 16;
+    x ^= x >> 8;
+    x ^= x >> 4;
+    x ^= x >> 2;
+    return ((x ^ (x << 1)) & 2) - 1;
+}
+
+inline int paritySum(Bitboard occupancy) {
+    return parity(occupancy & LeftTop) + parity(occupancy & RightTop) + parity(occupancy & LeftBottom) + parity(occupancy & RightBottom);
 }
 
 inline Bitboard pext(Bitboard x, Bitboard mask) {
