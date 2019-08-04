@@ -126,7 +126,7 @@ static double calculateEvaluationValue(std::string recordFilePath, double beta) 
         // 終了条件わからん
         // 「前回との差がピッタリ0」を条件にすると終わらない
         // -> １局面あたりの変化（の二乗）がXを下回ったら終了する
-        constexpr double X = 10e-6;
+        constexpr double X = 10e-4;
         if (std::abs(squaredLossSum - prevSquaredLossSum) / (double)M < X) {
             std::cout << "Done. variance: " << currentVariance << ", loop: " << loopCounter << " times" << std::endl;
             return currentVariance;
