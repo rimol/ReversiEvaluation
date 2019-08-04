@@ -30,8 +30,8 @@
 
 // 各特徴の評価値、評価値の更新分、ステップサイズをまとめて持つ
 struct FeatureValue {
-    double evalValue = 0.0;
-    double evalValueUpdate = 0.0;
+    double weight = 0.0;
+    double update = 0.0;
     double stepSize = 0.0;
 };
 
@@ -52,21 +52,21 @@ static inline void fillAllArraysAndVarialblesWithZero() {
 // y - e
 static inline double evalLoss(const RecordEx &recordEx) {
     double e = 0.0;
-    FOREACH_FEATURE_IN(recordEx, { e += fv.evalValue; })
-    e += (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]) * mobilityValue.evalValue;
-    e += (double)paritySum(recordEx.playerRotatedBB[0] | recordEx.opponentRotatedBB[0]) * parityValue.evalValue;
+    FOREACH_FEATURE_IN(recordEx, { e += fv.weight; })
+    e += (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]) * mobilityValue.weight;
+    e += (double)paritySum(recordEx.playerRotatedBB[0] | recordEx.opponentRotatedBB[0]) * parityValue.weight;
     return (double)recordEx.result - e;
 }
 
 static inline void applyUpdatesOfEvalValues() {
     FOREACH_FEATURE_VALUE(
-        fv.evalValue += fv.evalValueUpdate * fv.stepSize;
-        fv.evalValueUpdate = 0.0;)
+        fv.weight += fv.update * fv.stepSize;
+        fv.update = 0.0;)
 
-    mobilityValue.evalValue += mobilityValue.evalValueUpdate * mobilityValue.stepSize;
-    parityValue.evalValue += parityValue.evalValueUpdate * parityValue.stepSize;
+    mobilityValue.weight += mobilityValue.update * mobilityValue.stepSize;
+    parityValue.weight += parityValue.update * parityValue.stepSize;
 
-    mobilityValue.evalValueUpdate = parityValue.evalValueUpdate = 0.0;
+    mobilityValue.update = parityValue.update = 0.0;
 }
 
 // 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
@@ -115,10 +115,10 @@ static double calculateEvaluationValue(std::string recordFilePath, double beta) 
             double loss = evalLoss(recordEx);
             squaredLossSum += loss * loss;
             // このデータで出現する各特徴に対し更新分を加算していく
-            FOREACH_FEATURE_IN(recordEx, { fv.evalValueUpdate += loss; })
+            FOREACH_FEATURE_IN(recordEx, { fv.update += loss; })
 
-            mobilityValue.evalValueUpdate += loss * (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]);
-            parityValue.evalValueUpdate += loss * (double)paritySum(recordEx.playerRotatedBB[0] | recordEx.opponentRotatedBB[0]);
+            mobilityValue.update += loss * (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]);
+            parityValue.update += loss * (double)paritySum(recordEx.playerRotatedBB[0] | recordEx.opponentRotatedBB[0]);
         }
 
         double currentVariance = squaredLossSum / (double)M;
@@ -157,8 +157,8 @@ void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFo
         std::ofstream ofs(addFileNameAtEnd(outputFolderPath, std::to_string(i), "bin"), std::ios::binary);
         // 評価値のみ保存したいので仕方なしループ
         FOREACH_FEATURE_VALUE(
-            ofs.write((char *)&fv.evalValue, sizeof(double));)
-        ofs.write((char *)&mobilityValue.evalValue, sizeof(double));
-        ofs.write((char *)&parityValue.evalValue, sizeof(double));
+            ofs.write((char *)&fv.weight, sizeof(double));)
+        ofs.write((char *)&mobilityValue.weight, sizeof(double));
+        ofs.write((char *)&parityValue.weight, sizeof(double));
     }
 }
