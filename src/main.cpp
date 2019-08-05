@@ -107,34 +107,15 @@ void doAutoPlay() {
     play(N, depth);
 }
 
-void doThorConversion() {
-    std::vector<std::string> databaseFilePaths;
+void doDatabaseConversion() {
     std::string databaseFolderPath, outputFolderPath;
 
-    std::cout << "Enter a folder path that includes Thor database files:";
+    std::cout << "Enter a folder path that includes database files:";
     std::cin >> databaseFolderPath;
     std::cout << "Enter an output folder path:";
     std::cin >> outputFolderPath;
 
-    enumerateFilesIn(databaseFolderPath, databaseFilePaths);
-    convertThorDatabaseToRecordFiles(databaseFilePaths, outputFolderPath);
-
-    std::cout << "Done!" << std::endl;
-}
-
-void doGGFConversion() {
-    std::string databaseFolderPath, outputFolderPath;
-    std::vector<std::string> databaseFilePaths;
-
-    std::cout << "Enter a folder path that includes GGF database files:";
-    std::cin >> databaseFolderPath;
-    std::cout << "Enter an output folder path:";
-    std::cin >> outputFolderPath;
-
-    enumerateFilesIn(databaseFolderPath, databaseFilePaths);
-    convertGGFDatabaseToRecords(databaseFilePaths, outputFolderPath);
-
-    std::cout << "Done!" << std::endl;
+    convertDatabaseToRecord(databaseFolderPath, outputFolderPath);
 }
 
 void doRecordMerge() {
@@ -165,10 +146,8 @@ int main() {
             ffotest();
         else if (command == "autoplay")
             doAutoPlay();
-        else if (command == "thorconv")
-            doThorConversion();
-        else if (command == "ggfconv")
-            doGGFConversion();
+        else if (command == "conv")
+            doDatabaseConversion();
         else if (command == "mergerec")
             doRecordMerge();
         else if (command == "exit")
