@@ -656,8 +656,10 @@ void play(int N, int depth) {
     int wins = 0;
 
     for (int i = 0; i < N; ++i) {
-        Color randomPlayer = (Color)(mt() & 1);
+        Color randomPlayer = Black;
+        // (Color)(mt() & 1);
         Reversi reversi;
+        std::vector<Reversi> pos;
         while (!reversi.isFinished) {
             int sq;
             if (reversi.c == randomPlayer) {
@@ -666,10 +668,16 @@ void play(int N, int depth) {
                 sq = chooseBestMove(reversi.p, reversi.o, depth);
             }
             reversi.move(sq);
+            pos.push_back(reversi);
         }
 
         if (reversi.winner() == ~randomPlayer)
             ++wins;
+        else {
+            for (auto &p : pos) {
+                p.print();
+            }
+        }
     }
 
     std::cout << "Win rate:" << ((double)wins / (double)N * 100) << "%" << std::endl;
