@@ -48,7 +48,7 @@ constexpr char FeatureDefinitions[] =
 constexpr int DefinitionLength = sizeof(FeatureDefinitions) / sizeof(char);
 constexpr int GroupNum = (DefinitionLength - 2) / 72;
 
-enum Symmetory {
+enum Symmetry {
     R90F,
     R180F,
     F,
@@ -59,10 +59,10 @@ enum Symmetory {
 
 struct _Feature {
     int featureNum;
-    Symmetory featureSymmetory[GroupNum];
+    Symmetry featureSymmetry[GroupNum];
     Bitboard masks[GroupNum];
 
-    constexpr _Feature() : featureNum(), masks{}, featureSymmetory{} {
+    constexpr _Feature() : featureNum(), masks{}, featureSymmetry{} {
         int x = 1;
         for (int i = 0; i < 8; ++i) {
             for (int j = 0; j < GroupNum; ++j) {
@@ -89,20 +89,20 @@ struct _Feature {
             int memberNum = 0;
             // 90度回転が一致すれば、ほかの回転度のものも全部一致させることができる
             if (mask0 == mask90) {
-                featureSymmetory[i] = R90;
+                featureSymmetry[i] = R90;
                 featureNum += (memberNum = 2);
             }
             // 90度回転が一致しないときは, 270度回転も一致しない。（一致するとすればそのまま回転させ続けて90度に一致させることができることになって矛盾）
             else if (mask0 == mask180) {
-                featureSymmetory[i] = R180;
+                featureSymmetry[i] = R180;
                 featureNum += (memberNum = 4);
             } else {
-                featureSymmetory[i] = Asymmetry;
+                featureSymmetry[i] = Asymmetry;
                 featureNum += (memberNum = 8);
             }
 
             if (flipped == mask0 || flipped == mask90 || flipped == mask180 || flipped == mask270) {
-                featureSymmetory[i] = (Symmetory)(featureSymmetory[i] - 3);
+                featureSymmetry[i] = (Symmetry)(featureSymmetry[i] - 3);
                 featureNum -= memberNum / 2;
             }
         }
@@ -131,7 +131,7 @@ struct __Feature {
         int x = 0;
         constexpr auto feature = _Feature();
         for (int i = 0; i < GroupNum; ++i) {
-            switch (feature.featureSymmetory[i]) {
+            switch (feature.featureSymmetry[i]) {
             case R90F:
                 group[x] = i;
                 rotationType[x] = Rot0;
