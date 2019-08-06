@@ -119,13 +119,26 @@ void doDatabaseConversion() {
 }
 
 void doRecordMerge() {
-    std::string folderPath0, folderPath1;
-    std::cout << "Enter a folder path where records are stored:";
-    std::cin >> folderPath0;
-    std::cout << "Enter another folder path where records are stored:";
-    std::cin >> folderPath1;
+    std::vector<std::string> inputFolderpaths;
+    std::string outputFolderpath;
 
-    mergeRecordFiles(folderPath0, folderPath1);
+    while (true) {
+        std::string folderpath;
+        std::cout << "Enter a folder path where records are stored. when you finish entering folder paths, enter 0:";
+        std::cin >> folderpath;
+
+        if (folderpath == "0")
+            break;
+
+        inputFolderpaths.push_back(folderpath);
+    }
+
+    std::cout << "Enter a folder path where you want to save results:";
+    std::cin >> outputFolderpath;
+
+    mergeRecordFiles(inputFolderpaths, outputFolderpath);
+
+    std::cout << "Done!" << std::endl;
 }
 
 int main() {

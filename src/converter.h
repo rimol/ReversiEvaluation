@@ -16,4 +16,4 @@ struct Thor {
 };
 
 void convertDatabaseToRecord(const std::string &folderpath, const std::string &outputFolderpath);
-void mergeRecordFiles(std::string folderPath0, std::string folderPath1);
+void mergeRecordFiles(const std::vector<std::string> &inputFolderpaths, const std::string &outputFolderpath);

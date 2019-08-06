@@ -290,21 +290,30 @@ void convertDatabaseToRecord(const std::string &folderpath, const std::string &o
     std::cout << "Done! " << num << " games were converted!" << std::endl;
 }
 
-void mergeRecordFiles(std::string folderPath0, std::string folderPath1) {
+void mergeRecordFiles(const std::vector<std::string> &inputFolderpaths, const std::string &outputFolderpath) {
     for (int i = 1; i <= 60; ++i) {
-        std::ofstream ofs(addFileNameAtEnd(folderPath0, std::to_string(i), "bin"), std::ios::binary | std::ios::app);
-        std::ifstream ifs(addFileNameAtEnd(folderPath1, std::to_string(i), "bin"), std::ios::binary | std::ios::ate);
+        std::string outputFilepath = addFileNameAtEnd(outputFolderpath, std::to_string(i), "bin");
+        std::ofstream ofs(outputFilepath, std::ios::binary);
 
-        if (!ifs.is_open())
+        if (!ofs.is_open()) {
+            std::cout << "cannot open a file '" << outputFilepath << "'" << std::endl;
             continue;
-        if (!ofs.is_open())
-            continue;
+        }
 
-        const int RecordNum = ifs.tellg() / sizeof(Record);
-        ifs.seekg(0);
+        for (auto &inputFolderpath : inputFolderpaths) {
+            std::string inputFilepath = addFileNameAtEnd(inputFolderpath, std::to_string(i), "bin");
+            std::ifstream ifs(inputFilepath, std::ios::binary | std::ios::ate);
 
-        std::vector<Record> tmp(RecordNum);
-        ifs.read((char *)&tmp[0], RecordNum * sizeof(Record));
-        ofs.write((char *)&tmp[0], RecordNum * sizeof(Record));
+            if (!ifs.is_open()) {
+                std::cout << "cannot open a file '" << inputFilepath << "'" << std::endl;
+                continue;
+            }
+
+            const int RecordNum = ifs.tellg() / sizeof(Record);
+            ifs.seekg(0);
+            std::vector<Record> tmp(RecordNum);
+            ifs.read((char *)&tmp[0], RecordNum * sizeof(Record));
+            ofs.write((char *)&tmp[0], RecordNum * sizeof(Record));
+        }
     }
 }
