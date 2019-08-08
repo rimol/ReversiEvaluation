@@ -42,11 +42,13 @@ static FeatureValue mobilityValue;
     偶数理論に対応するやつ. 終盤用の特徴になるはず. 序盤の精度が下がりそうで怖い（変に最適化されそうなので）
 */
 static FeatureValue parityValue;
+static FeatureValue stoneDiffValue;
 
 static inline void fillAllArraysAndVarialblesWithZero() {
     std::fill((FeatureValue *)featureValues, (FeatureValue *)(featureValues + GroupNum), FeatureValue());
     mobilityValue = FeatureValue();
     parityValue = FeatureValue();
+    stoneDiffValue = FeatureValue();
 }
 
 // y - e
@@ -55,6 +57,7 @@ static inline double evalLoss(const RecordEx &recordEx) {
     FOREACH_FEATURE_IN(recordEx, { e += fv.weight; })
     e += (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]) * mobilityValue.weight;
     e += (double)paritySum(recordEx.playerRotatedBB[0] | recordEx.opponentRotatedBB[0]) * parityValue.weight;
+    e += (double)(popcount(recordEx.playerRotatedBB[0]) - popcount(recordEx.opponentRotatedBB[0])) * stoneDiffValue.weight;
     return (double)recordEx.result - e;
 }
 
@@ -65,8 +68,9 @@ static inline void applyUpdatesOfEvalValues() {
 
     mobilityValue.weight += mobilityValue.update * mobilityValue.stepSize;
     parityValue.weight += parityValue.update * parityValue.stepSize;
+    stoneDiffValue.weight += stoneDiffValue.update * stoneDiffValue.stepSize;
 
-    mobilityValue.update = parityValue.update = 0.0;
+    mobilityValue.update = parityValue.update = stoneDiffValue.update = 0.0;
 }
 
 // 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
@@ -103,7 +107,7 @@ static double calculateEvaluationValue(const std::vector<std::string> &recordFil
         fv.stepSize = std::min(beta / 50.0, beta / fv.stepSize);)
 
     // これやるの忘れてたああああああああ
-    mobilityValue.stepSize = parityValue.stepSize = beta / (double)numUsedRecords;
+    mobilityValue.stepSize = parityValue.stepSize = stoneDiffValue.stepSize = beta / (double)numUsedRecords;
 
     double prevSquaredLossSum = 0.0;
     long long loopCounter = 0;
@@ -120,6 +124,7 @@ static double calculateEvaluationValue(const std::vector<std::string> &recordFil
 
             mobilityValue.update += loss * (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]);
             parityValue.update += loss * (double)paritySum(recordEx.playerRotatedBB[0] | recordEx.opponentRotatedBB[0]);
+            stoneDiffValue.update += loss * (double)(popcount(recordEx.playerRotatedBB[0]) - popcount(recordEx.opponentRotatedBB[0]));
         }
 
         double currentVariance = squaredLossSum / (double)numUsedRecords;
@@ -168,5 +173,6 @@ void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFo
             ofs.write((char *)&fv.weight, sizeof(double));)
         ofs.write((char *)&mobilityValue.weight, sizeof(double));
         ofs.write((char *)&parityValue.weight, sizeof(double));
+        ofs.write((char *)&stoneDiffValue.weight, sizeof(double));
     }
 }

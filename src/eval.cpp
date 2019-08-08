@@ -53,6 +53,7 @@ void initSymmetricPattern() {
 static double evaluationValues[60][GroupNum][EvalArrayLength];
 static double mobilityWeight[60];
 static double parityWeight[60];
+static double diffStoneWeight[60];
 
 void loadEvalValues(std::string evalValuesFolderPath) {
     for (int i = 0; i < 60; ++i) {
@@ -60,6 +61,7 @@ void loadEvalValues(std::string evalValuesFolderPath) {
         ifs.read((char *)evaluationValues[i], sizeof(double) * GroupNum * EvalArrayLength);
         ifs.read((char *)&mobilityWeight[i], sizeof(double));
         ifs.read((char *)&parityWeight[i], sizeof(double));
+        ifs.read((char *)&diffStoneWeight[i], sizeof(double));
     }
 }
 
@@ -79,5 +81,9 @@ double evaluate(Bitboard p, Bitboard o) {
         e += evaluationValues[t][g][extract(p_, o_, g)];
     }
 
-    return e + (double)mobilityDiff(p, o) * mobilityWeight[t] + (double)paritySum(p | o) * parityWeight[t];
+    e += (double)mobilityDiff(p, o) * mobilityWeight[t];
+    e += (double)paritySum(p | o) * parityWeight[t];
+    e += (double)(popcount(p) - popcount(o)) * diffStoneWeight[t];
+
+    return e;
 }
