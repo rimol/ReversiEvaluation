@@ -1,7 +1,7 @@
-#include <iostream>
-#include <algorithm>
-#include "bitboard.h"
 #include "reversi.h"
+#include "bitboard.h"
+#include <algorithm>
+#include <iostream>
 
 Color Reversi::winner() const {
     int diff = popcount(p) - popcount(o);
@@ -11,7 +11,8 @@ Color Reversi::winner() const {
 // 盤面を進める。
 // 不正な手であればfalseを返す。
 bool Reversi::move(int sq) {
-    if ((moves >> sq & 1ULL) ^ 1ULL) return false;
+    if ((moves >> sq & 1ULL) ^ 1ULL)
+        return false;
 
     Bitboard sqbit = 1ULL << sq;
     Bitboard flip = getFlip(p, o, sqbit);
@@ -42,18 +43,24 @@ void Reversi::print() const {
     cTable[0b010] = 'O';
     cTable[0b100] = '*';
 
-    std::cout << "  A B C D E F G H\n";
-    for (int i = 63; i >= 0; --i) {
-        if (i % 8 == 7) std::cout << (8 - i / 8);
-        unsigned int b = (p >> i & 1U) | ((o >> i & 1U) << 1) | ((moves >> i & 1U) << 2);
-        std::cout << ' ' << cTable[b];
-        if (i % 8 == 0) std::cout << std::endl;
+    Bitboard black = p, white = o;
+    int numBlack = popcount(p), numWhite = popcount(o);
+    if (c == White) {
+        std::swap(black, white);
+        std::swap(numBlack, numWhite);
     }
 
-    int diff = popcount(p) - popcount(o);
-    if (c == White) diff *= -1;
+    std::cout << "  A B C D E F G H\n";
+    for (int i = 63; i >= 0; --i) {
+        if (i % 8 == 7)
+            std::cout << (8 - i / 8);
+        unsigned int b = (black >> i & 1U) | ((white >> i & 1U) << 1) | ((moves >> i & 1U) << 2);
+        std::cout << ' ' << cTable[b];
+        if (i % 8 == 0)
+            std::cout << std::endl;
+    }
 
-    std::cout << "(Black)-(White):" << diff << std::endl;
+    std::cout << "Black: " << numBlack << ", White: " << numWhite << std::endl;
 }
 
 std::string convertToLegibleSQ(int sq) {
