@@ -70,27 +70,28 @@ static inline void applyUpdatesOfEvalValues() {
 }
 
 // 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
-static double calculateEvaluationValue(std::string recordFilePath, double beta) {
+static double calculateEvaluationValue(const std::vector<std::string> &recordFilepaths, double beta) {
     fillAllArraysAndVarialblesWithZero();
 
+    int numUsedRecords = 0;
+
     // ファイルを何回も読むのは無駄なので最初に全部読み込む
-    std::ifstream ifs(recordFilePath, std::ios::ate | std::ios::binary);
-    if (!ifs.is_open()) {
-        std::cout << "Can't open the file: " << recordFilePath << std::endl;
-        return -1.0;
-    }
+    std::vector<RecordEx> records;
+    for (auto &filepath : recordFilepaths) {
+        std::ifstream ifs(filepath, std::ios::ate | std::ios::binary);
+        if (!ifs.is_open()) {
+            std::cout << "Can't open a file: " << filepath << std::endl;
+        } else {
+            int numRecordInThisFile = ifs.tellg() / sizeof(Record);
+            numUsedRecords += numRecordInThisFile;
+            ifs.seekg(0);
 
-    // ファイルに入っている局面の数
-    const int M = ifs.tellg() / sizeof(Record);
-    std::vector<RecordEx> records(M);
-    //beginから0バイトのところにストリーム位置を変更
-    ifs.seekg(0, std::ios::beg);
-
-    // 一つ一つ変換しながら読み込む
-    for (int i = 0; i < M; ++i) {
-        Record rec;
-        ifs.read((char *)&rec, sizeof(Record));
-        records[i] = RecordEx(rec);
+            for (int i = 0; i < numRecordInThisFile; ++i) {
+                Record record;
+                ifs.read((char *)&record, sizeof(Record));
+                records.emplace_back(record);
+            }
+        }
     }
 
     // 予め各特徴のステップサイズを計算しておく。
@@ -102,7 +103,7 @@ static double calculateEvaluationValue(std::string recordFilePath, double beta) 
         fv.stepSize = std::min(beta / 50.0, beta / fv.stepSize);)
 
     // これやるの忘れてたああああああああ
-    mobilityValue.stepSize = parityValue.stepSize = beta / (double)M;
+    mobilityValue.stepSize = parityValue.stepSize = beta / (double)numUsedRecords;
 
     double prevSquaredLossSum = 0.0;
     long long loopCounter = 0;
@@ -121,13 +122,13 @@ static double calculateEvaluationValue(std::string recordFilePath, double beta) 
             parityValue.update += loss * (double)paritySum(recordEx.playerRotatedBB[0] | recordEx.opponentRotatedBB[0]);
         }
 
-        double currentVariance = squaredLossSum / (double)M;
+        double currentVariance = squaredLossSum / (double)numUsedRecords;
 
         // 終了条件わからん
         // 「前回との差がピッタリ0」を条件にすると終わらない
         // -> １局面あたりの変化（の二乗）がXを下回ったら終了する
         constexpr double X = 10e-4;
-        if (std::abs(squaredLossSum - prevSquaredLossSum) / (double)M < X) {
+        if (std::abs(squaredLossSum - prevSquaredLossSum) / (double)numUsedRecords < X) {
             std::cout << "Done. variance: " << currentVariance << ", loop: " << loopCounter << " times" << std::endl;
             return currentVariance;
         }
@@ -149,8 +150,15 @@ void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFo
 
     // (1-60).binについてそれぞれ計算→保存
     for (int i = 60; i >= 1; --i) {
+        std::vector<std::string> folderpaths;
+        folderpaths.push_back(addFileNameAtEnd(recordsFolderPath, std::to_string(i), "bin"));
+        if (i > 1)
+            folderpaths.push_back(addFileNameAtEnd(recordsFolderPath, std::to_string(i - 1), "bin"));
+        if (i < 60)
+            folderpaths.push_back(addFileNameAtEnd(recordsFolderPath, std::to_string(i + 1), "bin"));
+
         // ファイルパスを渡して計算させる
-        double variance = calculateEvaluationValue(addFileNameAtEnd(recordsFolderPath, std::to_string(i), "bin"), beta);
+        double variance = calculateEvaluationValue(folderpaths, beta);
         // 保存～
         vofs << i << ".bin: " << variance << std::endl;
 
