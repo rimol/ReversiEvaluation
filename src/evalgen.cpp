@@ -107,7 +107,8 @@ static double calculateEvaluationValue(const std::vector<std::string> &recordFil
         fv.stepSize = std::min(beta / 50.0, beta / fv.stepSize);)
 
     // これやるの忘れてたああああああああ
-    mobilityValue.stepSize = parityValue.stepSize = stoneDiffValue.stepSize = beta / (double)numUsedRecords;
+    mobilityValue.stepSize = parityValue.stepSize = beta / (double)numUsedRecords;
+    stoneDiffValue.stepSize = beta / (double)numUsedRecords / 4.0;
 
     double prevSquaredLossSum = 0.0;
     long long loopCounter = 0;
