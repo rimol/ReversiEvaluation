@@ -706,9 +706,7 @@ void play(int N, int depth) {
         if (reversi.winner() == ~randomPlayer)
             ++wins;
         else {
-            for (auto &p : pos) {
-                p.print();
-            }
+            pos.back().print();
         }
     }
 

@@ -46,7 +46,7 @@ constexpr Bitboard LeftBottom = 0x00000000f0f0f0f0ULL;
 constexpr Bitboard RightBottom = 0x000000000f0f0f0fULL;
 
 // 立っているビットの数を数える
-constexpr Bitboard popcount(Bitboard x) {
+constexpr int popcount(Bitboard x) {
     // x -= (x >> 1) & 0x5555555555555555ULL;
     // x = (x & 0x3333333333333333ULL) + ((x >> 2) & 0x3333333333333333ULL);
     // x = (x & 0x0f0f0f0f0f0f0f0fULL) + ((x >> 4) & 0x0f0f0f0f0f0f0f0fULL);
@@ -55,7 +55,7 @@ constexpr Bitboard popcount(Bitboard x) {
 }
 
 // 一番下のビットが下から数えて何ビット目にあるか求める(0-indexed)
-constexpr Bitboard tzcnt(Bitboard x) {
+constexpr int tzcnt(Bitboard x) {
     // return popcount(~x & x - 1ULL);
     return __builtin_ctzll(x);
 }
