@@ -78,15 +78,18 @@ void doRecGen() {
 
 void doEvalGen() {
     std::string recordsFolderPath, outputFolderPath;
-    double beta;
+    int first, last;
     std::cout << "Enter a folder path where records are stored:";
     std::cin >> recordsFolderPath;
     std::cout << "Enter a folder path where you want to save the data:";
     std::cin >> outputFolderPath;
-    std::cout << "Enter the value of beta(this will determine the step size):";
-    std::cin >> beta;
+    std::cout << "first: ";
+    std::cin >> first;
+    std::cout << "last: ";
+    std::cin >> last;
 
-    generateEvaluationFiles(recordsFolderPath, outputFolderPath, beta);
+    if (first <= last)
+        generateEvaluationFiles(recordsFolderPath, outputFolderPath, first, last);
 
     std::cout << "Done!" << std::endl;
 }

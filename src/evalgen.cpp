@@ -28,6 +28,8 @@
         Statement                                                             \
     }
 
+constexpr double beta = 0.01;
+
 // 各特徴の評価値、評価値の更新分、ステップサイズをまとめて持つ
 struct FeatureValue {
     double weight = 0.0;
@@ -74,7 +76,7 @@ static inline void applyUpdatesOfEvalValues() {
 }
 
 // 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
-static double calculateEvaluationValue(const std::vector<std::string> &recordFilepaths, double beta) {
+static double calculateEvaluationValue(const std::vector<std::string> &recordFilepaths) {
     fillAllArraysAndVarialblesWithZero();
 
     int numUsedRecords = 0;
@@ -93,6 +95,7 @@ static double calculateEvaluationValue(const std::vector<std::string> &recordFil
             for (int i = 0; i < numRecordInThisFile; ++i) {
                 Record record;
                 ifs.read((char *)&record, sizeof(Record));
+                assert((record.p & record.o) == 0ULL);
                 records.emplace_back(record);
             }
         }
@@ -149,13 +152,13 @@ static double calculateEvaluationValue(const std::vector<std::string> &recordFil
     }
 }
 
-void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFolderPath, double beta) {
+void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFolderPath, int first, int last) {
     outputFolderPath = createCurrentTimeFolderIn(outputFolderPath);
     // 分散を保存するファイルを作る
     std::ofstream vofs(addFileNameAtEnd(outputFolderPath, "variance", "txt"));
 
     // (1-60).binについてそれぞれ計算→保存
-    for (int i = 60; i >= 1; --i) {
+    for (int i = first; i <= last; ++i) {
         std::vector<std::string> folderpaths;
         folderpaths.push_back(addFileNameAtEnd(recordsFolderPath, std::to_string(i), "bin"));
         if (i > 1)
@@ -164,7 +167,7 @@ void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFo
             folderpaths.push_back(addFileNameAtEnd(recordsFolderPath, std::to_string(i + 1), "bin"));
 
         // ファイルパスを渡して計算させる
-        double variance = calculateEvaluationValue(folderpaths, beta);
+        double variance = calculateEvaluationValue(folderpaths);
         // 保存～
         vofs << i << ".bin: " << variance << std::endl;
 
