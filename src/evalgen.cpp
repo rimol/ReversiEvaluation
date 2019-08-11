@@ -38,28 +38,15 @@ struct FeatureValue {
 };
 
 static FeatureValue featureValues[GroupNum][EvalArrayLength];
-static FeatureValue mobilityValue;
-/*
-    盤面を縦横4分割して、その分割した盤面の1つに対して、空きマスの数が偶数なら-1、奇数なら1となる特徴.
-    偶数理論に対応するやつ. 終盤用の特徴になるはず. 序盤の精度が下がりそうで怖い（変に最適化されそうなので）
-*/
-static FeatureValue parityValue;
-static FeatureValue stoneDiffValue;
 
 static inline void fillAllArraysAndVarialblesWithZero() {
     std::fill((FeatureValue *)featureValues, (FeatureValue *)(featureValues + GroupNum), FeatureValue());
-    mobilityValue = FeatureValue();
-    parityValue = FeatureValue();
-    stoneDiffValue = FeatureValue();
 }
 
 // y - e
 static inline double evalLoss(const RecordEx &recordEx) {
     double e = 0.0;
     FOREACH_FEATURE_IN(recordEx, { e += fv.weight; })
-    e += (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]) * mobilityValue.weight;
-    e += (double)paritySum(recordEx.playerRotatedBB[0] | recordEx.opponentRotatedBB[0]) * parityValue.weight;
-    e += (double)(popcount(recordEx.playerRotatedBB[0]) - popcount(recordEx.opponentRotatedBB[0])) * stoneDiffValue.weight;
     return (double)recordEx.result - e;
 }
 
@@ -67,12 +54,6 @@ static inline void applyUpdatesOfEvalValues() {
     FOREACH_FEATURE_VALUE(
         fv.weight += fv.update * fv.stepSize;
         fv.update = 0.0;)
-
-    mobilityValue.weight += mobilityValue.update * mobilityValue.stepSize;
-    parityValue.weight += parityValue.update * parityValue.stepSize;
-    stoneDiffValue.weight += stoneDiffValue.update * stoneDiffValue.stepSize;
-
-    mobilityValue.update = parityValue.update = stoneDiffValue.update = 0.0;
 }
 
 // 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
@@ -109,10 +90,6 @@ static double calculateEvaluationValue(const std::vector<std::string> &recordFil
     FOREACH_FEATURE_VALUE(
         fv.stepSize = std::min(beta / 50.0, beta / fv.stepSize);)
 
-    // これやるの忘れてたああああああああ
-    mobilityValue.stepSize = parityValue.stepSize = beta / (double)numUsedRecords;
-    stoneDiffValue.stepSize = beta / (double)numUsedRecords / 4.0;
-
     double prevSquaredLossSum = 0.0;
     long long loopCounter = 0;
     // ピピーーッ！無限ループ！！逮捕！！
@@ -125,10 +102,6 @@ static double calculateEvaluationValue(const std::vector<std::string> &recordFil
             squaredLossSum += loss * loss;
             // このデータで出現する各特徴に対し更新分を加算していく
             FOREACH_FEATURE_IN(recordEx, { fv.update += loss; })
-
-            mobilityValue.update += loss * (double)mobilityDiff(recordEx.playerRotatedBB[0], recordEx.opponentRotatedBB[0]);
-            parityValue.update += loss * (double)paritySum(recordEx.playerRotatedBB[0] | recordEx.opponentRotatedBB[0]);
-            stoneDiffValue.update += loss * (double)(popcount(recordEx.playerRotatedBB[0]) - popcount(recordEx.opponentRotatedBB[0]));
         }
 
         double currentVariance = squaredLossSum / (double)numUsedRecords;
@@ -173,9 +146,6 @@ void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFo
             // 評価値のみ保存したいので仕方なしループ
             FOREACH_FEATURE_VALUE(
                 ofs.write((char *)&fv.weight, sizeof(double));)
-            ofs.write((char *)&mobilityValue.weight, sizeof(double));
-            ofs.write((char *)&parityValue.weight, sizeof(double));
-            ofs.write((char *)&stoneDiffValue.weight, sizeof(double));
         }
     }
 }
