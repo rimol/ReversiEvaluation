@@ -16,6 +16,10 @@ constexpr int integerPow(int x, int n) {
 // もったいないけどこれで固定しておく
 constexpr int EvalArrayLength = integerPow(3, MaxFocusedSquareCount);
 
+// 60の約数となるようにしてください。
+constexpr int NumStages = 15;
+constexpr int StageInterval = 60 / NumStages;
+
 /*
 書式:
 改行

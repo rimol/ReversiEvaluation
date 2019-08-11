@@ -153,30 +153,29 @@ static double calculateEvaluationValue(const std::vector<std::string> &recordFil
 }
 
 void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFolderPath, int first, int last) {
-    outputFolderPath = createCurrentTimeFolderIn(outputFolderPath);
-    // 分散を保存するファイルを作る
-    std::ofstream vofs(addFileNameAtEnd(outputFolderPath, "variance", "txt"));
+    if (first <= last && 1 <= first && last <= NumStages) {
+        outputFolderPath = createCurrentTimeFolderIn(outputFolderPath);
+        // 分散を保存するファイルを作る
+        std::ofstream vofs(addFileNameAtEnd(outputFolderPath, "variance", "txt"));
 
-    // (1-60).binについてそれぞれ計算→保存
-    for (int i = first; i <= last; ++i) {
-        std::vector<std::string> folderpaths;
-        folderpaths.push_back(addFileNameAtEnd(recordsFolderPath, std::to_string(i), "bin"));
-        if (i > 1)
-            folderpaths.push_back(addFileNameAtEnd(recordsFolderPath, std::to_string(i - 1), "bin"));
-        if (i < 60)
-            folderpaths.push_back(addFileNameAtEnd(recordsFolderPath, std::to_string(i + 1), "bin"));
+        for (int i = first; i <= last; ++i) {
+            std::vector<std::string> folderpaths;
+            for (int j = 0; j < StageInterval; ++j) {
+                folderpaths.push_back(addFileNameAtEnd(recordsFolderPath, std::to_string(i * 4 - j), "bin"));
+            }
 
-        // ファイルパスを渡して計算させる
-        double variance = calculateEvaluationValue(folderpaths);
-        // 保存～
-        vofs << i << ".bin: " << variance << std::endl;
+            // ファイルパスを渡して計算させる
+            double variance = calculateEvaluationValue(folderpaths);
+            // 保存～
+            vofs << i << ".bin: " << variance << std::endl;
 
-        std::ofstream ofs(addFileNameAtEnd(outputFolderPath, std::to_string(i), "bin"), std::ios::binary);
-        // 評価値のみ保存したいので仕方なしループ
-        FOREACH_FEATURE_VALUE(
-            ofs.write((char *)&fv.weight, sizeof(double));)
-        ofs.write((char *)&mobilityValue.weight, sizeof(double));
-        ofs.write((char *)&parityValue.weight, sizeof(double));
-        ofs.write((char *)&stoneDiffValue.weight, sizeof(double));
+            std::ofstream ofs(addFileNameAtEnd(outputFolderPath, std::to_string(i), "bin"), std::ios::binary);
+            // 評価値のみ保存したいので仕方なしループ
+            FOREACH_FEATURE_VALUE(
+                ofs.write((char *)&fv.weight, sizeof(double));)
+            ofs.write((char *)&mobilityValue.weight, sizeof(double));
+            ofs.write((char *)&parityValue.weight, sizeof(double));
+            ofs.write((char *)&stoneDiffValue.weight, sizeof(double));
+        }
     }
 }

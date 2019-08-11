@@ -50,13 +50,13 @@ void initSymmetricPattern() {
     }
 }
 
-static double evaluationValues[60][GroupNum][EvalArrayLength];
-static double mobilityWeight[60];
-static double parityWeight[60];
-static double diffStoneWeight[60];
+static double evaluationValues[NumStages][GroupNum][EvalArrayLength];
+static double mobilityWeight[NumStages];
+static double parityWeight[NumStages];
+static double diffStoneWeight[NumStages];
 
 void loadEvalValues(std::string evalValuesFolderPath) {
-    for (int i = 0; i < 60; ++i) {
+    for (int i = 0; i < NumStages; ++i) {
         std::ifstream ifs(addFileNameAtEnd(evalValuesFolderPath, std::to_string(i + 1), "bin"), std::ios::binary);
         ifs.read((char *)evaluationValues[i], sizeof(double) * GroupNum * EvalArrayLength);
         ifs.read((char *)&mobilityWeight[i], sizeof(double));
@@ -70,7 +70,7 @@ double evaluate(Bitboard p, Bitboard o) {
     rotateAndFlipBB(p, playerRotatedBB);
     rotateAndFlipBB(o, opponentRotatedBB);
 
-    int t = popcount(p | o) - 4 - 1;
+    int t = (popcount(p | o) - 4 - 1) / StageInterval;
 
     double e = 0.0;
     for (int i = 0; i < FeatureNum; ++i) {
