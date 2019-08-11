@@ -2,6 +2,7 @@
 #include "engine.h"
 #include "eval.h"
 #include "reversi.h"
+#include <algorithm>
 #include <cassert>
 #include <random>
 #include <string>
@@ -22,6 +23,35 @@ int base3Tobase10(std::string s) {
             x *= 3;
     }
     return x;
+}
+
+std::string toBase3Str(int x) {
+    std::string res = "";
+    while (x != 0) {
+        res += std::to_string(x % 3);
+        x /= 3;
+    }
+    std::reverse(res.begin(), res.end());
+    return res;
+}
+
+void printEachSquare(Bitboard b, Bitboard w) {
+    // 上位ビットから出力する（人間が数字に変換しやすいため）
+    for (int i = 7; i >= 0; --i) {
+        for (int j = 7; j >= 0; --j) {
+            int sq = i * 8 + j;
+
+            if (b >> sq & 1) {
+                std::cout << "1 ";
+            } else if (w >> sq & 1) {
+                std::cout << "2 ";
+            } else {
+                std::cout << "0 ";
+            }
+        }
+
+        std::cout << std::endl;
+    }
 }
 
 void test() {
@@ -617,7 +647,7 @@ void test() {
     // getMoves, getFlip
 
     // テスト回数
-    constexpr int N = 10000000;
+    constexpr int N = 100;
 
     std::random_device rnd;
     std::mt19937_64 mt64(rnd());
@@ -630,6 +660,12 @@ void test() {
         Bitboard b = mt64();
         Bitboard w = mt64() & ~b;
         Bitboard blank = ~(b | w);
+
+        printEachSquare(b, w);
+
+        for (int j = 0; j < GroupNum; ++j) {
+            std::cout << j << ": " << toBase3Str(extract(b, w, j)) << std::endl;
+        }
 
         Bitboard moves0 = getMoves(b, w);
         Bitboard moves1 = getMoves_slow(b, w);
