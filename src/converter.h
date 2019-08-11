@@ -15,5 +15,7 @@ struct Thor {
     int8_t moves[60];
 };
 
+// 拡張子が.ggfならGGF形式の、.wtbならThor形式で読み込んで変換する（ちゃんと拡張子をつけてないと読み込めない）。
 void convertDatabaseToRecord(const std::string &folderpath, const std::string &outputFolderpath);
+// outputのフォルダ内のi.binはまずクリアされるので注意
 void mergeRecordFiles(const std::vector<std::string> &inputFolderpaths, const std::string &outputFolderpath);
