@@ -144,6 +144,17 @@ void doRecordMerge() {
     std::cout << "Done!" << std::endl;
 }
 
+void doRecFix() {
+    std::string inputFolderpath, outputFolderpath;
+    std::cout << "Enter a folder path where old-type records are stored:";
+    std::cin >> inputFolderpath;
+    std::cout << "Enter a folder path where you want to save data:";
+    std::cin >> outputFolderpath;
+
+    fixRecords(inputFolderpath, outputFolderpath);
+    std::cout << "Done!" << std::endl;
+}
+
 int main() {
     initSymmetricPattern();
     // test();
@@ -166,6 +177,8 @@ int main() {
             doDatabaseConversion();
         else if (command == "mergerec")
             doRecordMerge();
+        else if (command == "fixrec")
+            doRecFix();
         else if (command == "exit")
             break;
     }

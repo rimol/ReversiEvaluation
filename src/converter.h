@@ -19,3 +19,6 @@ struct Thor {
 void convertDatabaseToRecord(const std::string &folderpath, const std::string &outputFolderpath);
 // outputのフォルダ内のi.binはまずクリアされるので注意
 void mergeRecordFiles(const std::vector<std::string> &inputFolderpaths, const std::string &outputFolderpath);
+// record.pに常に黒石ビット、oに常に白石ビットが入るように局面データを修正する関数
+// 今更だけど、Recordじゃなくて、Positionがクラス名として適当では？ｗ
+void fixRecords(const std::string &inputFolderpath, const std::string &outputFolderpath);

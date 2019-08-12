@@ -327,3 +327,54 @@ void mergeRecordFiles(const std::vector<std::string> &inputFolderpaths, const st
         }
     }
 }
+
+void fixRecords(const std::string &inputFolderpath, const std::string &outputFolderpath) {
+    std::ifstream manyifs[60];
+    std::ofstream manyofs[60];
+    for (int i = 0; i < 60; ++i) {
+        std::string inputFilepath = addFileNameAtEnd(inputFolderpath, std::to_string(i + 1), "bin");
+        std::string outputFilepath = addFileNameAtEnd(outputFolderpath, std::to_string(i + 1), "bin");
+        manyifs[i] = std::ifstream(inputFilepath, std::ios::binary);
+        manyofs[i] = std::ofstream(outputFilepath, std::ios::binary);
+
+        if (!manyifs[i].is_open()) {
+            std::cout << "Can't open a file: " << inputFilepath << std::endl;
+            return;
+        }
+
+        if (!manyofs[i].is_open()) {
+            std::cout << "Can't open a file: " << outputFilepath << std::endl;
+            return;
+        }
+    }
+
+    while (!manyifs[0].eof()) {
+        Reversi reversi;
+        int i = 0;
+        while (!reversi.isFinished) {
+            Record record;
+            manyifs[i].read((char *)&record, sizeof(Record));
+
+            if (manyifs[i].eof()) {
+                break;
+            }
+
+            Bitboard sqbit = (record.p | record.o) ^ (reversi.p | reversi.o);
+
+            assert(popcount(sqbit) == 1);
+
+            if (reversi.move(tzcnt(sqbit))) {
+                assert(reversi.p == record.p && reversi.o == record.o);
+                if (reversi.c == White) {
+                    std::swap(record.p, record.o);
+                    record.result *= -1;
+                }
+
+                manyofs[i].write((char *)&record, sizeof(Record));
+            } else
+                assert(false);
+
+            ++i;
+        }
+    }
+}
