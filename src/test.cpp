@@ -52,6 +52,8 @@ void printEachSquare(Bitboard b, Bitboard w) {
 
         std::cout << std::endl;
     }
+
+    std::cout << std::endl;
 }
 
 void test() {
@@ -647,7 +649,7 @@ void test() {
     // getMoves, getFlip
 
     // テスト回数
-    constexpr int N = 100;
+    constexpr int N = 1;
 
     std::random_device rnd;
     std::mt19937_64 mt64(rnd());
@@ -661,7 +663,13 @@ void test() {
         Bitboard w = mt64() & ~b;
         Bitboard blank = ~(b | w);
 
-        printEachSquare(b, w);
+        Bitboard rotatedBlack[8], rotatedWhite[8];
+        rotateAndFlipBB(b, rotatedBlack);
+        rotateAndFlipBB(w, rotatedWhite);
+
+        for (int i = 0; i < 8; ++i) {
+            printEachSquare(rotatedBlack[i], rotatedWhite[i]);
+        }
 
         for (int j = 0; j < GroupNum; ++j) {
             std::cout << j << ": " << toBase3Str(extract(b, w, j)) << std::endl;
@@ -724,7 +732,7 @@ void play(int N, int depth) {
     int wins = 0;
 
     for (int i = 0; i < N; ++i) {
-        Color randomPlayer = Black;
+        Color randomPlayer = White;
         // (Color)(mt() & 1);
         Reversi reversi;
         std::vector<Reversi> pos;
@@ -742,7 +750,10 @@ void play(int N, int depth) {
         if (reversi.winner() == ~randomPlayer)
             ++wins;
         else {
-            pos.back().print();
+            for (auto &board : pos) {
+                board.print();
+                std::cout << "eval: " << evaluate(board.p, board.o) << std::endl;
+            }
         }
     }
 
