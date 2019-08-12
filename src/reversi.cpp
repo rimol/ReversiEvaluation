@@ -59,7 +59,7 @@ void Reversi::print() const {
         if (i % 8 == 0)
             std::cout << std::endl;
     }
-
+    std::cout << "Color:" << (c == Black ? "Black" : "White") << std::endl;
     std::cout << "Black: " << numBlack << ", White: " << numWhite << std::endl;
 }
 
