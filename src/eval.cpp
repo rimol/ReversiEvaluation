@@ -57,6 +57,19 @@ void loadEvalValues(std::string evalValuesFolderPath) {
         std::ifstream ifs(addFileNameAtEnd(evalValuesFolderPath, std::to_string(i + 1), "bin"), std::ios::binary);
         ifs.read((char *)evaluationValues[i], sizeof(double) * GroupNum * EvalArrayLength);
     }
+
+    // 得点充填率を出力
+    for (int i = 0; i < GroupNum; ++i) {
+        for (int j = 0; j < NumStages; ++j) {
+            int numAllPattern = integerPow(3, popcount(Feature.masks[i]));
+            int numNonZeroPattern = 0;
+            for (int k = 0; k < numAllPattern; ++k) {
+                numNonZeroPattern += evaluationValues[j][i][k] != 0;
+            }
+
+            std::cout << "Stage " << j << ", Group " << i << ": " << ((double)numNonZeroPattern / (double)numAllPattern * 100.0) << std::endl;
+        }
+    }
 }
 
 double evaluate(Bitboard p, Bitboard o) {

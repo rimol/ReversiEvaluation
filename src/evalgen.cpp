@@ -7,8 +7,7 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
-#include <sstream>
-#include <time.h>
+#include <set>
 #include <vector>
 
 #define FOREACH_FEATURE_VALUE(Statement)            \
@@ -146,6 +145,36 @@ void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFo
             // 評価値のみ保存したいので仕方なしループ
             FOREACH_FEATURE_VALUE(
                 ofs.write((char *)&fv.weight, sizeof(double));)
+        }
+    }
+}
+
+void printPatternCoverage(const std::string &recordsFolderPath) {
+    for (int i = 0; i < NumStages; ++i) {
+        std::set<int> occurrence[GroupNum];
+        for (int j = i * StageInterval; j < (i + 1) * StageInterval; ++j) {
+            std::ifstream ifs(addFileNameAtEnd(recordsFolderPath, std::to_string(j + 1), "bin"), std::ios::ate | std::ios::binary);
+            int filesize_byte = ifs.tellg();
+            ifs.seekg(0);
+            std::vector<Record> records(filesize_byte / sizeof(Record));
+            ifs.read((char *)&records[0], filesize_byte);
+
+            for (Record &record : records) {
+                RecordEx recodeEx(record);
+                for (int k = 0; k < FeatureNum; ++k) {
+                    int group = Feature.group[k];
+                    Bitboard rotatedP = recodeEx.playerRotatedBB[Feature.rotationType[k]];
+                    Bitboard rotatedO = recodeEx.opponentRotatedBB[Feature.rotationType[k]];
+
+                    int pattern = convert(pext(rotatedP, Feature.masks[group]), pext(rotatedO, Feature.masks[group]));
+                    occurrence[group].insert(pattern);
+                }
+            }
+        }
+
+        for (int j = 0; j < GroupNum; ++j) {
+            int numAllPattern = integerPow(3, popcount(Feature.masks[j]));
+            std::cout << "Stage " << i << ", Group " << j << ": " << ((double)occurrence[j].size() / (double)numAllPattern * 100.0) << "%" << std::endl;
         }
     }
 }
