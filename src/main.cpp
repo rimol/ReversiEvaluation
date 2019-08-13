@@ -47,9 +47,17 @@ void doReversi() {
                 std::cin >> pos;
                 sq = AlphabetToNumber[pos[0]] + (7 - (pos[1] - '1')) * 8;
             } else {
-                sq = chooseBestMove(reversi.p, reversi.o, depth);
+                auto movesWithScore = evalAllMoves(reversi.p, reversi.o, depth);
+                double bestScore = -100000.0;
+                for (auto &ms : movesWithScore) {
+                    std::cout << convertToLegibleSQ(ms.move) << ": " << ms.score << std::endl;
+                    if (ms.score > bestScore) {
+                        sq = ms.move;
+                        bestScore = ms.score;
+                    }
+                }
                 // コンピュータが選択した手を表示する
-                std::cout << convertToLegibleSQ(sq) << std::endl;
+                std::cout << "Computer selected: " << convertToLegibleSQ(sq) << std::endl;
             }
 
             moved = reversi.move(sq);
@@ -58,6 +66,7 @@ void doReversi() {
         }
     }
 
+    reversi.print();
     std::cout << "The game is over." << std::endl;
 }
 
@@ -87,6 +96,8 @@ void doEvalGen() {
     std::cin >> first;
     std::cout << "last: ";
     std::cin >> last;
+
+    printPatternCoverage(recordsFolderPath);
 
     if (first <= last)
         generateEvaluationFiles(recordsFolderPath, outputFolderPath, first, last);
