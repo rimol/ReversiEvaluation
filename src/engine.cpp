@@ -3,7 +3,7 @@
 
 double alphabeta(Bitboard p, Bitboard o, double alpha, double beta, bool passed, int depth) {
     if (depth == 0)
-        return evaluate(p, o);
+        return evaluate_classic(p, o);
 
     Bitboard moves = getMoves(p, o);
     if (moves == 0ULL)

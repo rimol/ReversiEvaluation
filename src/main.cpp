@@ -169,6 +169,7 @@ void doRecFix() {
 int main() {
     initSymmetricPattern();
     // test();
+    play(100, 1);
     while (true) {
         std::cout << "Enter a command:";
         std::string command;

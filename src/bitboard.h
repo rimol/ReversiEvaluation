@@ -307,6 +307,11 @@ inline int getMobility(Bitboard p, Bitboard o) {
     return popcount(getMoves(p, o));
 }
 
+inline int getWeightedMobility(Bitboard p, Bitboard o) {
+    Bitboard moves = getMoves(p, o);
+    return popcount(moves) + (moves >> 0 & 1ULL) + (moves >> 7 & 1ULL) + (moves >> 56 & 1ULL) + (moves >> 63 & 1ULL);
+}
+
 inline int mobilityDiff(Bitboard p, Bitboard o) {
     return getMobility(p, o) - getMobility(o, p);
 }
@@ -320,6 +325,9 @@ inline void rotateAndFlipBB(Bitboard x, Bitboard (&out)[8]) {
         out[i + 4] = flipVertical(out[i]);
     }
 }
+
+// 確定石列挙
+Bitboard getStableStones(Bitboard p, Bitboard o);
 
 // 愚直実装ばーじょん
 // バグつぶし用

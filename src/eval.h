@@ -257,5 +257,10 @@ inline int extract(Bitboard p, Bitboard o, int g) {
     return SymmetricPattern[g][convert(pext(p, Feature.masks[g]), pext(o, Feature.masks[g]))];
 }
 
+inline int getStage(Bitboard p, Bitboard o) {
+    return (popcount(p | o) - 4 - 1) / StageInterval;
+}
+
 void loadEvalValues(std::string evalValuesFolderPath);
 double evaluate(Bitboard p, Bitboard o);
+double evaluate_classic(Bitboard p, Bitboard o);
