@@ -71,16 +71,24 @@ void doReversi() {
 }
 
 void doRecGen() {
-    int n, depth;
-    std::string folderPath;
-    std::cout << "Specify the number of records you want to generate:";
-    std::cin >> n;
-    std::cout << "Specify a depth of the exact play:";
-    std::cin >> depth;
-    std::cout << "Enter a folder path where you want to create the save folder:";
-    std::cin >> folderPath;
+    int n, randomDepth, searchDepth, exactDepth;
+    std::string saveFolderpath, evalFolderpath;
 
-    generateRecord(n, depth, folderPath);
+    std::cout << "The number of records you want to generate: ";
+    std::cin >> n;
+    std::cout << "Random opening depth: ";
+    std::cin >> randomDepth;
+    std::cout << "Searching(Mid game) depth: ";
+    std::cin >> searchDepth;
+    std::cout << "Exact depth: ";
+    std::cin >> exactDepth;
+    std::cout << "Save Folder: ";
+    std::cin >> saveFolderpath;
+    std::cout << "Folder where evaluation files you want to use exist: ";
+    std::cin >> evalFolderpath;
+
+    loadEvalValues(evalFolderpath);
+    generateRecords(n, randomDepth, searchDepth, exactDepth, saveFolderpath);
 
     std::cout << "Done!\n";
 }
@@ -168,8 +176,6 @@ void doRecFix() {
 
 int main() {
     initSymmetricPattern();
-    // test();
-    play(100, 1);
     while (true) {
         std::cout << "Enter a command:";
         std::string command;

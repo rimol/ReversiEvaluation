@@ -1,4 +1,4 @@
 #pragma once
 #include <string>
-// n回自動対戦をして、各手数における盤面+最終石差の記録をファイルに保存
-void generateRecord(int n, int depth, std::string folderPath);
+
+void generateRecords(int n, int randomDepth, int searchDepth, int exactDepth, const std::string &saveFolderpath);

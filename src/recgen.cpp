@@ -1,77 +1,58 @@
+#include "recgen.h"
+#include "bitboard.h"
+#include "engine.h"
+#include "reversi.h"
+#include "solver.h"
+#include "util.h"
 #include <fstream>
 #include <random>
 #include <sstream>
 #include <string>
 #include <time.h>
 #include <vector>
-#include "engine.h"
-#include "bitboard.h"
-#include "recgen.h"
-#include "record.h"
-#include "reversi.h"
-#include "solver.h"
-#include "util.h"
 
-struct RecgenPosition {
-    Bitboard p, o;
-    Color c;
-};
+void generateRecords(int n, int randomDepth, int searchDepth, int exactDepth, const std::string &saveFolderpath) {
+    auto currentTime = time(nullptr);
+    auto local = localtime(&currentTime);
+    std::stringstream ss;
+    ss << local->tm_year << "-"
+       << local->tm_mon << "-"
+       << local->tm_mday << "-"
+       << local->tm_hour << ":"
+       << local->tm_min << ":"
+       << local->tm_sec << "-"
+       << "rand" << randomDepth
+       << "mid" << searchDepth
+       << "exact" << exactDepth;
+    // バイナリではなくテキストで書き込む.
+    std::ofstream ofs(addFileNameAtEnd(saveFolderpath, ss.str(), "txt"));
 
-void generateRecord(int n, int depth, std::string folderPath) {
-    // 指定されたフォルダに保存用フォルダを作成
-    // フォルダ名は現在時刻
-    folderPath = createCurrentTimeFolderIn(folderPath);
-
-    std::ofstream ofss[60];
-    for (int i = 0; i < 60; ++i) {
-        ofss[i] = std::ofstream(addFileNameAtEnd(folderPath, std::to_string(i + 1), "bin"), std::ios::binary);
-    }
-
-    std::random_device rnd; // 非決定的乱数生成器、これでメルセンヌ・ツイスタのシードを設定
+    std::random_device rnd;
     std::mt19937 mt(rnd());
 
-    // n回自動対戦をさせる
     for (int i = 0; i < n; ++i) {
         Reversi reversi;
-        bool solved = false;
-        bool errorOccured = false;
-        Solution solution;
-        Color solverColor;
-        std::vector<RecgenPosition> moves;
-
-        while (!errorOccured && !reversi.isFinished) {
-            if (64 - reversi.stoneCount() >= depth) {
-                solution = solve(reversi.p, reversi.o);
-                solverColor = reversi.c;
-                solved = true;
-            }
-
+        while (!reversi.isFinished) {
             int sq;
-            if (solved) {
-                sq = solution.bestMoves.front();
-                solution.bestMoves.erase(solution.bestMoves.begin());
-            }
-            else {
+            if ((reversi.stoneCount() - 4) < randomDepth) {
                 sq = chooseRandomMove(reversi.p, reversi.o, mt);
+            } else if ((reversi.stoneCount() + exactDepth) < 64) {
+                sq = chooseBestMove(reversi.p, reversi.o, searchDepth);
+            } else {
+                break;
             }
 
-            errorOccured = !reversi.move(sq);
-            if (errorOccured) {
-                std::cout << "an illegal move was detected. skip this game." << std::endl;
-            }
-            else {
-                moves.push_back({reversi.p, reversi.o, reversi.c});
-            }
+            if (reversi.move(sq)) {
+                ofs << convertToLegibleSQ(sq);
+            } else
+                assert(false);
         }
 
-        if (errorOccured) continue;
-
-        for (int i = 0; i < 60; ++i) {
-            Record record(moves[i].p, moves[i].o, solution.bestScore);
-            
-            if (moves[i].c != solverColor) record.result *= -1;
-
-            ofss[i].write((char*)&record, sizeof(Record));
+        auto solution = solve(reversi.p, reversi.o);
+        for (auto sq : solution.bestMoves) {
+            ofs << convertToLegibleSQ(sq);
         }
+
+        ofs << std::endl;
     }
 }
