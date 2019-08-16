@@ -4,6 +4,10 @@
 #include <cassert>
 #include <string>
 
+// 全敗勝ちとかAlphaBetaの最初の窓とかで使う。
+// これぐらいのおおきさで十分。
+constexpr double EvalInf = 1000.0;
+
 // 一つの特徴で何個のマスまでデータをもつか指定しておく
 constexpr int MaxFocusedSquareCount = 10;
 

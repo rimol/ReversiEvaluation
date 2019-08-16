@@ -73,6 +73,15 @@ void loadEvalValues(std::string evalValuesFolderPath) {
 }
 
 double evaluate(Bitboard p, Bitboard o) {
+    // これ、差を返すようにしたほうがいいかな...?
+    if (popcount(p) == 0) {
+        return -EvalInf;
+    }
+
+    if (popcount(o) == 0) {
+        return EvalInf;
+    }
+
     Bitboard playerRotatedBB[8], opponentRotatedBB[8];
     rotateAndFlipBB(p, playerRotatedBB);
     rotateAndFlipBB(o, opponentRotatedBB);
