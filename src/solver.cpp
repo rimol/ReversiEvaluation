@@ -1,18 +1,19 @@
+#include "solver.h"
+#include "bitboard.h"
+#include "reversi.h"
+#include "search.h"
 #include <algorithm>
 #include <chrono>
 #include <string>
 #include <vector>
-#include "bitboard.h"
-#include "solver.h"
-#include "reversi.h"
 
 static long long nodeCount = 0L;
 
 // v = ミニマックス値
 
 // negamaxかいて. <- 要はpからみた石差の最大値を返す
-// min < v < max
-static int negamax(Bitboard p, Bitboard o, int min, int max, bool passed) {
+// alpha < v < beta
+static int negamax(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
     ++nodeCount;
 
     if (popcount(p | o) == 63) {
@@ -21,14 +22,12 @@ static int negamax(Bitboard p, Bitboard o, int min, int max, bool passed) {
         if (flip != 0ULL) {
             ++nodeCount;
             return popcount(p) - popcount(o) + (popcount(flip) << 1) + 1;
-        }
-        else {
+        } else {
             flip = getFlip(o, p, ~(p | o));
             if (flip != 0ULL) {
                 ++nodeCount;
                 return popcount(p) - popcount(o) - (popcount(flip) << 1) - 1;
-            }
-            else {
+            } else {
                 return popcount(p) - popcount(o);
             }
         }
@@ -38,10 +37,10 @@ static int negamax(Bitboard p, Bitboard o, int min, int max, bool passed) {
 
     // パスの処理
     if (moves == 0ULL)
-        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negamax(o, p, -max, -min, true));
+        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negamax(o, p, -beta, -alpha, true));
 
     // 打てるところがあるとき
-    
+
     int bestScore = -64; // 64が最小値なので
     // 下からビットを取り出していく
     while (moves) {
@@ -49,9 +48,10 @@ static int negamax(Bitboard p, Bitboard o, int min, int max, bool passed) {
         // 盤面をすすめる
         Bitboard flip = getFlip(p, o, sqbit);
         // 敵からみた石差が返ってくるため, 符号を反転させる
-        int score = -negamax(o ^ flip, p ^ flip ^ sqbit, -max, -std::max(bestScore, min), false); // 下限がbestScore or minになる（大きい方）. 相手から見たときの符号反転注意
+        int score = -negamax(o ^ flip, p ^ flip ^ sqbit, -beta, -std::max(bestScore, alpha), false); // 下限がbestScore or minになる（大きい方）. 相手から見たときの符号反転注意
         // 枝刈りできます(少なくともbestScoreがmax以上になるので)
-        if (score >= max) return score;
+        if (score >= beta)
+            return score;
         bestScore = std::max(score, bestScore);
         moves ^= sqbit;
     }
@@ -59,53 +59,18 @@ static int negamax(Bitboard p, Bitboard o, int min, int max, bool passed) {
     return bestScore;
 }
 
-struct CandidateMove {
-    Bitboard p;
-    Bitboard o;
-    int weightedMobility;
+SearchedPosition transpositionTable[TTSize];
 
-    // ソート用
-    bool operator < (const CandidateMove& cm) const {
-        return weightedMobility < cm.weightedMobility;
-    }
-
-    bool operator > (const CandidateMove& cm) const {
-        return weightedMobility > cm.weightedMobility;
-    }
-};
-
-// BoardやらPositionやら混在していますが、これは計画不足によるもの
-struct SearchedPosition {
-    // ミニマックス値の存在範囲
-    int upper;
-    int lower;
-
-    Bitboard p;
-    Bitboard o;
-
-    bool correspondsTo(Bitboard _p, Bitboard _o) {
-        return _p == p && _o == o;
-    }
-};
-
-SearchedPosition transpositionTable[0x200000];
-
-// とりあえず適当に
-static int inline getIndex(Bitboard p, Bitboard o) {
-    return (((p >> 32) * 2 + p * 3 + (o >> 32) * 5 + o * 7) >> 7) & 0x1fffff;
-}
-
-// TODO: 置換表
-// weighted mobilityの少ない順から見ていく. null window search
-static int negascout(Bitboard p, Bitboard o, int min, int max, bool passed) {
-    if (popcount(p | o) >= 58) return negamax(p, o, min, max, passed);
+static int negascout(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
+    if (popcount(p | o) >= 58)
+        return negamax(p, o, alpha, beta, passed);
 
     ++nodeCount;
 
     Bitboard moves = getMoves(p, o);
     // パス
     if (moves == 0ULL)
-        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negascout(o, p, -max, -min, true));
+        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negascout(o, p, -beta, -alpha, true));
 
     // テーブルから前の探索結果を取り出し、vの範囲を狭めて効率化を図る.
     const int index = getIndex(p, o);
@@ -113,35 +78,30 @@ static int negascout(Bitboard p, Bitboard o, int min, int max, bool passed) {
 
     if (sp.correspondsTo(p, o)) {
         // カット
-        if (sp.lower >= max) return sp.lower;
-        else if (sp.upper <= min) return sp.upper;
-        else if (sp.upper == sp.lower) return sp.upper;
+        if (sp.lower >= beta)
+            return sp.lower;
+        else if (sp.upper <= alpha)
+            return sp.upper;
+        else if (sp.upper == sp.lower)
+            return sp.upper;
 
         // 窓縮小
-        min = std::max(min, sp.lower);
-        max = std::min(max, sp.upper);
+        alpha = std::max(alpha, sp.lower);
+        beta = std::min(beta, sp.upper);
     }
     // 一致しなかったorはじめて
-    else sp = { 64, -64, p, o };
+    else
+        sp = {64, -64, p, o};
 
     std::vector<CandidateMove> orderedMoves;
     while (moves) {
         Bitboard sqbit = moves & -moves;
-        Bitboard flip = getFlip(p, o, sqbit);
-
-        Bitboard nextp = p ^ flip ^ sqbit;
-        Bitboard nexto = o ^ flip;
-
-        Bitboard opponentsMoves = getMoves(nexto, nextp);
-        // 角に+1重みをつけた敵の置けるところの数
-        int weightedMobility = popcount(opponentsMoves)
-            + (opponentsMoves >> 0 & 1ULL)
-            + (opponentsMoves >> 7 & 1ULL)
-            + (opponentsMoves >> 56 & 1ULL)
-            + (opponentsMoves >> 63 & 1ULL);
-
-        orderedMoves.push_back({ nextp, nexto, weightedMobility });
         moves ^= sqbit;
+        Bitboard flip = getFlip(p, o, sqbit);
+        Bitboard nextP = o ^ flip;
+        Bitboard nextO = p ^ flip ^ sqbit;
+
+        orderedMoves.push_back({nextP, nextO, getWeightedMobility(nextP, nextO)});
     }
 
     // 少ない順=昇順
@@ -149,11 +109,10 @@ static int negascout(Bitboard p, Bitboard o, int min, int max, bool passed) {
     std::sort(orderedMoves.begin(), orderedMoves.end());
 
     // ここから探索
-    CandidateMove probablyBestMove = orderedMoves[0];
-    int bestScore = -negascout(probablyBestMove.o, probablyBestMove.p, -max, -min, false);
+    int bestScore = -negascout(orderedMoves[0].nextP, orderedMoves[0].nextO, -beta, -alpha, false);
 
     // 枝刈り
-    if (bestScore >= max) {
+    if (bestScore >= beta) {
         sp.lower = std::max(bestScore, sp.lower);
         // upperはそのまま
 
@@ -162,18 +121,17 @@ static int negascout(Bitboard p, Bitboard o, int min, int max, bool passed) {
         return bestScore;
     }
 
-    const int len = orderedMoves.size();
-    int a = std::max(bestScore, min); // 探索窓: (max(bestScore, min), max) minはつかうので改変しない
-    for (int i = 1; i < len; ++i) {
-        CandidateMove cm = orderedMoves[i];
+    int a = std::max(bestScore, alpha); // 探索窓: (beta(bestScore, alpha), beta) minはつかうので改変しない
+    for (int i = 1; i < orderedMoves.size(); ++i) {
+        CandidateMove &cm = orderedMoves[i];
         // (1) v <= roughScore <= a
         // (2) a < roughScore <= v
         // のどちらかを満たす
         // Null Window Searchのこの性質が成り立つ理由がわからんけど... <- わかりましたいずれ証明をQiitaに上げます
-        int roughScore = -negascout(cm.o, cm.p, -(a + 1), -a, false);
+        int roughScore = -negascout(cm.nextP, cm.nextO, -(a + 1), -a, false);
 
-        // roughScore >= max > a なので (2).
-        if (roughScore >= max) {
+        // roughScore >= beta > a なので (2).
+        if (roughScore >= beta) {
             sp.lower = std::max(roughScore, sp.lower);
             transpositionTable[index] = sp;
             return roughScore;
@@ -182,10 +140,10 @@ static int negascout(Bitboard p, Bitboard o, int min, int max, bool passed) {
         else if (roughScore > a) {
             // v => roughScore > a >= bestScoreであるので
             // ついでに探索窓も狭める
-            a = bestScore = -negascout(cm.o, cm.p, -max, -roughScore, false);
+            a = bestScore = -negascout(cm.nextP, cm.nextO, -beta, -roughScore, false);
 
             // 枝刈りチェック
-            if (bestScore >= max) {
+            if (bestScore >= beta) {
                 sp.lower = std::max(bestScore, sp.lower);
                 transpositionTable[index] = sp;
                 return bestScore;
@@ -200,9 +158,11 @@ static int negascout(Bitboard p, Bitboard o, int min, int max, bool passed) {
 
     // 置換表更新
     // 確定
-    if (bestScore > min) sp.upper = sp.lower = bestScore;
-    // bestScore <= min
-    else sp.upper = std::min(bestScore, sp.upper);
+    if (bestScore > alpha)
+        sp.upper = sp.lower = bestScore;
+    // bestScore <= alpha
+    else
+        sp.upper = std::min(bestScore, sp.upper);
 
     transpositionTable[index] = sp;
 
@@ -210,15 +170,17 @@ static int negascout(Bitboard p, Bitboard o, int min, int max, bool passed) {
 }
 
 // 方針としてはまず最善結果を求めておいて、これをもとに途中計算を軽くする.
-void findBestMoves(Bitboard p, Bitboard o, bool passed, int bestScore, std::vector<int>& ans) {
+void findBestMoves(Bitboard p, Bitboard o, bool passed, int bestScore, std::vector<int> &ans) {
     Bitboard moves = getMoves(p, o);
     if (moves == 0ULL) {
-        if (!passed) findBestMoves(o, p, true, -bestScore, ans);
+        if (!passed)
+            findBestMoves(o, p, true, -bestScore, ans);
         return;
     }
 
     while (moves) {
-        Bitboard sqbit = moves & -moves; moves ^= sqbit;
+        Bitboard sqbit = moves & -moves;
+        moves ^= sqbit;
         Bitboard flip = getFlip(p, o, sqbit);
         Bitboard _p = p ^ flip ^ sqbit;
         Bitboard _o = o ^ flip;
@@ -227,7 +189,8 @@ void findBestMoves(Bitboard p, Bitboard o, bool passed, int bestScore, std::vect
         int score = -negascout(_o, _p, -bestScore - 1, -bestScore + 1, false);
         if (score == bestScore) {
             ans.push_back(tzcnt(sqbit));
-            p = _p; o = _o;
+            p = _p;
+            o = _o;
             break;
         }
     }
@@ -264,39 +227,42 @@ struct FFO {
     FFO(std::string boardText, Color color) : p(), o() {
         Bitboard bit = 1ULL << 63;
         for (char c : boardText) {
-            if (c == 'X') p |= bit;
-            else if (c == 'O') o |= bit;
+            if (c == 'X')
+                p |= bit;
+            else if (c == 'O')
+                o |= bit;
 
             bit >>= 1;
         }
-        if (color == White) std::swap(p, o);
+        if (color == White)
+            std::swap(p, o);
     }
 };
 
 void ffotest() {
     const FFO tests[] = {
-        { "O--OOOOX-OOOOOOXOOXXOOOXOOXOOOXXOOOOOOXX---OOOOX----O--X--------", Black },
-        { "-OOOOO----OOOOX--OOOOOO-XXXXXOO--XXOOX--OOXOXX----OXXO---OOO--O-", Black },
-        { "--OOO-------XX-OOOOOOXOO-OOOOXOOX-OOOXXO---OOXOO---OOOXO--OOOO--", Black },
-        { "--XXXXX---XXXX---OOOXX---OOXXXX--OOXXXO-OOOOXOO----XOX----XXXXX-", White },
-        { "--O-X-O---O-XO-O-OOXXXOOOOOOXXXOOOOOXX--XXOOXO----XXXX-----XXX--", White },
-        { "---XXXX-X-XXXO--XXOXOO--XXXOXO--XXOXXO---OXXXOO-O-OOOO------OO--", Black },
-        { "---XXX----OOOX----OOOXX--OOOOXXX--OOOOXX--OXOXXX--XXOO---XXXX-O-", Black },
-        { "-OOOOO----OOOO---OOOOX--XXXXXX---OXOOX--OOOXOX----OOXX----XXXX--", White },
+        {"O--OOOOX-OOOOOOXOOXXOOOXOOXOOOXXOOOOOOXX---OOOOX----O--X--------", Black},
+        {"-OOOOO----OOOOX--OOOOOO-XXXXXOO--XXOOX--OOXOXX----OXXO---OOO--O-", Black},
+        {"--OOO-------XX-OOOOOOXOO-OOOOXOOX-OOOXXO---OOXOO---OOOXO--OOOO--", Black},
+        {"--XXXXX---XXXX---OOOXX---OOXXXX--OOXXXO-OOOOXOO----XOX----XXXXX-", White},
+        {"--O-X-O---O-XO-O-OOXXXOOOOOOXXXOOOOOXX--XXOOXO----XXXX-----XXX--", White},
+        {"---XXXX-X-XXXO--XXOXOO--XXXOXO--XXOXXO---OXXXOO-O-OOOO------OO--", Black},
+        {"---XXX----OOOX----OOOXX--OOOOXXX--OOOOXX--OXOXXX--XXOO---XXXX-O-", Black},
+        {"-OOOOO----OOOO---OOOOX--XXXXXX---OXOOX--OOOXOX----OOXX----XXXX--", White},
     };
 
     for (FFO ffo : tests) {
         Solution solution = solve(ffo.p, ffo.o);
 
         std::cout << "BestScore:" << solution.bestScore << std::endl
-            << "ScoreLockTime:" << (solution.scoreLockTime / 1000.0) << " sec" << std::endl
-            << "WholeTime:" << (solution.wholeTime / 1000.0) << " sec" << std::endl
-            << "NPS:" << solution.NPS() << std::endl;
+                  << "ScoreLockTime:" << (solution.scoreLockTime / 1000.0) << " sec" << std::endl
+                  << "WholeTime:" << (solution.wholeTime / 1000.0) << " sec" << std::endl
+                  << "NPS:" << solution.NPS() << std::endl;
 
         for (int sq : solution.bestMoves) {
             std::cout << convertToLegibleSQ(sq) << ' ';
         }
-        
+
         std::cout << std::endl;
     }
 }
