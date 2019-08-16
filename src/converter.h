@@ -17,6 +17,8 @@ struct Thor {
 
 // 拡張子が.ggfならGGF形式の、.wtbならThor形式で読み込んで変換する（ちゃんと拡張子をつけてないと読み込めない）。
 void convertDatabaseToRecord(const std::string &folderpath, const std::string &outputFolderpath);
+// recgen.cppで作った棋譜ファイルを教師データの形に変換する.
+void convertRecgenProducts(const std::string &inputFilepath, const std::string &outputFolderpath);
 // outputのフォルダ内のi.binはまずクリアされるので注意
 void mergeRecordFiles(const std::vector<std::string> &inputFolderpaths, const std::string &outputFolderpath);
 // record.pに常に黒石ビット、oに常に白石ビットが入るように局面データを修正する関数

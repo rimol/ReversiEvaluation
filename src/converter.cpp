@@ -6,6 +6,7 @@
 #include <cassert>
 #include <cctype>
 #include <fstream>
+#include <regex>
 
 // 棋譜訂正の深さ
 constexpr int ExactDepth = 16;
@@ -169,13 +170,15 @@ bool getNextContents(const std::vector<std::string> &tagNames, StringWithCursor 
     return false;
 }
 
+int toNumericSQ(char colAlphabet, char rowNumber) {
+    char base = 'a' <= colAlphabet && colAlphabet <= 'h' ? 'a' : 'A';
+    return (7 - (colAlphabet - base)) + (7 - (rowNumber - '1')) * 8;
+}
+
 int toNumericSQ(const std::string &moveString) {
     char colAlphabet = moveString[0];
     char rowNumber = moveString[1];
-
-    char base = 'a' <= colAlphabet && colAlphabet <= 'h' ? 'a' : 'A';
-
-    return (7 - (colAlphabet - base)) + (7 - (rowNumber - '1')) * 8;
+    return toNumericSQ(colAlphabet, rowNumber);
 }
 
 bool isValidMoveString(const std::string &moveString) {
@@ -298,6 +301,48 @@ void convertDatabaseToRecord(const std::string &folderpath, const std::string &o
     }
 
     std::cout << "Done! " << num << " games were converted!" << std::endl;
+}
+
+void convertRecgenProducts(const std::string &inputFilepath, const std::string &outputFolderpath) {
+    std::ofstream ofs[60];
+    for (int i = 1; i <= 60; ++i) {
+        ofs[i - 1] = std::ofstream(addFileNameAtEnd(outputFolderpath, std::to_string(i), "bin"), std::ios::binary);
+    }
+
+    std::ifstream ifs(inputFilepath);
+
+    int randomDepth = 0;
+    int cur = inputFilepath.rfind("rand") + 4;
+    while ('0' <= inputFilepath[cur] && inputFilepath[cur] <= '9') {
+        randomDepth *= 10;
+        randomDepth += inputFilepath[cur++] - '0';
+    }
+
+    std::string recordStr;
+    while (getline(ifs, recordStr)) {
+        Reversi reversi;
+        std::vector<Reversi> pos;
+
+        for (int i = 0; i < recordStr.size() - 1; i += 2) {
+            if (reversi.move(toNumericSQ(recordStr[i], recordStr[i + 1]))) {
+                pos.push_back(reversi);
+            } else {
+                std::cerr << "Can't convert: " << recordStr << std::endl;
+                break;
+            }
+        }
+
+        if (reversi.isFinished) {
+            int result = pos.back().stoneCount();
+            Color resultColor = pos.back().c;
+            for (int i = randomDepth - 1; i < pos.size(); ++i) {
+                Record record(pos[i].p, pos[i].o, result);
+                if (pos[i].c != resultColor)
+                    record.result *= -1;
+                ofs[i].write((char *)&record, sizeof(Record));
+            }
+        }
+    }
 }
 
 void mergeRecordFiles(const std::vector<std::string> &inputFolderpaths, const std::string &outputFolderpath) {

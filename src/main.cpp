@@ -174,6 +174,17 @@ void doRecFix() {
     std::cout << "Done!" << std::endl;
 }
 
+void doToRec() {
+    std::string inputFilepath, outputFolderpath;
+    std::cout << "Record file: ";
+    std::cin >> inputFilepath;
+    std::cout << "Enter a folder path where you want to save data:";
+    std::cin >> outputFolderpath;
+
+    convertRecgenProducts(inputFilepath, outputFolderpath);
+    std::cout << "Done!" << std::endl;
+}
+
 int main() {
     initSymmetricPattern();
     while (true) {
@@ -197,6 +208,8 @@ int main() {
             doRecordMerge();
         else if (command == "fixrec")
             doRecFix();
+        else if (command == "torec")
+            doToRec();
         else if (command == "exit")
             break;
     }
