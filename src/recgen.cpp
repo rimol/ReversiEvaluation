@@ -15,12 +15,12 @@ void generateRecords(int n, int randomDepth, int searchDepth, int exactDepth, co
     auto currentTime = time(nullptr);
     auto local = localtime(&currentTime);
     std::stringstream ss;
-    ss << local->tm_year << "-"
-       << local->tm_mon << "-"
-       << local->tm_mday << "-"
-       << local->tm_hour << ":"
-       << local->tm_min << ":"
-       << local->tm_sec << "-"
+    ss << (local->tm_year + 1900) << "年"
+       << (local->tm_mon + 1) << "月"
+       << local->tm_mday << "日"
+       << local->tm_hour << "時"
+       << local->tm_min << "分"
+       << local->tm_sec << "秒-"
        << "rand" << randomDepth
        << "mid" << searchDepth
        << "exact" << exactDepth;
@@ -48,9 +48,11 @@ void generateRecords(int n, int randomDepth, int searchDepth, int exactDepth, co
                 assert(false);
         }
 
-        auto solution = solve(reversi.p, reversi.o);
-        for (auto sq : solution.bestMoves) {
-            ofs << convertToLegibleSQ(sq);
+        if (!reversi.isFinished) {
+            auto solution = solve(reversi.p, reversi.o);
+            for (auto sq : solution.bestMoves) {
+                ofs << convertToLegibleSQ(sq);
+            }
         }
 
         ofs << std::endl;
