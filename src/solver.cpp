@@ -59,6 +59,19 @@ static int negamax(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
     return bestScore;
 }
 
+struct SearchedPosition {
+    // ミニマックス値の存在範囲
+    int upper;
+    int lower;
+
+    Bitboard p;
+    Bitboard o;
+
+    bool correspondsTo(Bitboard _p, Bitboard _o) {
+        return _p == p && _o == o;
+    }
+};
+
 SearchedPosition transpositionTable[TTSize];
 
 static int negascout(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
@@ -100,7 +113,6 @@ static int negascout(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
         Bitboard flip = getFlip(p, o, sqbit);
         Bitboard nextP = o ^ flip;
         Bitboard nextO = p ^ flip ^ sqbit;
-
         orderedMoves.push_back({nextP, nextO, getWeightedMobility(nextP, nextO)});
     }
 
@@ -118,7 +130,7 @@ static int negascout(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
 
         // 更新
         transpositionTable[index] = sp;
-        return bestScore;
+        return sp.lower;
     }
 
     int a = std::max(bestScore, alpha); // 探索窓: (beta(bestScore, alpha), beta) minはつかうので改変しない
@@ -134,7 +146,7 @@ static int negascout(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
         if (roughScore >= beta) {
             sp.lower = std::max(roughScore, sp.lower);
             transpositionTable[index] = sp;
-            return roughScore;
+            return sp.lower;
         }
         // (2)、 再探索
         else if (roughScore > a) {
@@ -146,7 +158,7 @@ static int negascout(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
             if (bestScore >= beta) {
                 sp.lower = std::max(bestScore, sp.lower);
                 transpositionTable[index] = sp;
-                return bestScore;
+                return sp.lower;
             }
         }
         // roughScore <= a, つまり(1)
@@ -158,15 +170,17 @@ static int negascout(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
 
     // 置換表更新
     // 確定
-    if (bestScore > alpha)
+    if (bestScore > alpha) {
         sp.upper = sp.lower = bestScore;
+        transpositionTable[index] = sp;
+        return bestScore;
+    }
     // bestScore <= alpha
-    else
+    else {
         sp.upper = std::min(bestScore, sp.upper);
-
-    transpositionTable[index] = sp;
-
-    return bestScore;
+        transpositionTable[index] = sp;
+        return sp.upper;
+    }
 }
 
 // 方針としてはまず最善結果を求めておいて、これをもとに途中計算を軽くする.
@@ -199,7 +213,6 @@ void findBestMoves(Bitboard p, Bitboard o, bool passed, int bestScore, std::vect
 }
 
 Solution solve(Bitboard p, Bitboard o) {
-    // 置換表初期化した方がよい？ std::fill(transpositionTable, transpositionTable + 0x200000, SearchedPosition());
     Solution solution;
     nodeCount = 0;
 
