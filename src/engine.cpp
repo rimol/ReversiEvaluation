@@ -3,33 +3,19 @@
 #include "search.h"
 #include <cassert>
 
-// solverのやつは整数なのでわざわざもう一つdouble版をつくりました。
-// テンプレート？そんなもん知らん。
-struct SearchedPosition {
-    double upper;
-    double lower;
+static SearchedPosition<double> TT1[TTSize], TT2[TTSize];
 
-    Bitboard p;
-    Bitboard o;
+static SearchedPosition<double> *currentTT = TT1;
+static SearchedPosition<double> *previousTT = TT2;
 
-    bool correspondsTo(Bitboard _p, Bitboard _o) {
-        return _p == p && _o == o;
-    }
-};
-
-static SearchedPosition transpositonTable[TTSize];
-
-static void clearTranspositionTable() {
-    std::memset(transpositonTable, 0, sizeof(transpositonTable));
-}
-
+// previousTTを並べ替えに、currentTTを結果書き込みに使う
 static double negaScout(Bitboard p, Bitboard o, double alpha, double beta, bool passed, int depth) {
     Bitboard moves = getMoves(p, o);
     if (moves == 0ULL && !passed)
         return -negaScout(o, p, -beta, -alpha, true, depth);
 
     const int index = getIndex(p, o);
-    SearchedPosition sp = transpositonTable[index];
+    auto sp = currentTT[index];
 
     if (sp.correspondsTo(p, o)) {
         if (sp.lower >= beta)
@@ -46,18 +32,24 @@ static double negaScout(Bitboard p, Bitboard o, double alpha, double beta, bool 
 
     if (depth == 0 || moves == 0ULL) {
         sp.upper = sp.lower = evaluate(p, o);
-        transpositonTable[index] = sp;
+        currentTT[index] = sp;
         return sp.upper;
     }
 
-    std::vector<CandidateMove> orderedMoves;
+    std::vector<CandidateMove<double>> orderedMoves;
     while (moves != 0ULL) {
         Bitboard sqbit = moves & -moves;
         moves ^= sqbit;
         Bitboard flip = getFlip(p, o, sqbit);
         Bitboard nextP = o ^ flip;
         Bitboard nextO = p ^ flip ^ sqbit;
-        orderedMoves.push_back({nextP, nextO, (int)evaluate(nextP, nextO)});
+
+        auto prevResult = previousTT[getIndex(nextP, nextO)];
+        if (prevResult.correspondsTo(nextP, nextO)) {
+            orderedMoves.push_back({nextP, nextO, prevResult.lower});
+        } else {
+            orderedMoves.push_back({nextP, nextO, 0.0});
+        }
     }
 
     // 敵から見て評価値の小さい順にみていく
@@ -66,13 +58,13 @@ static double negaScout(Bitboard p, Bitboard o, double alpha, double beta, bool 
     double bestScore = -negaScout(orderedMoves[0].nextP, orderedMoves[0].nextO, -beta, -alpha, false, depth - 1);
     if (bestScore >= beta) {
         sp.lower = std::max(sp.lower, bestScore);
-        transpositonTable[index] = sp;
+        currentTT[index] = sp;
         return sp.lower;
     }
 
     double a = std::max(alpha, bestScore);
     for (int i = 1; i < orderedMoves.size(); ++i) {
-        CandidateMove &cm = orderedMoves[i];
+        auto &cm = orderedMoves[i];
         /*
         これ、評価値が実数なので1より少し幅を小さくしたほうがいいかも.
         ということで0.001ぐらいにしてみる.
@@ -87,7 +79,7 @@ static double negaScout(Bitboard p, Bitboard o, double alpha, double beta, bool 
 
         if (roughScore >= beta) {
             sp.lower = std::max(roughScore, sp.lower);
-            transpositonTable[index] = sp;
+            currentTT[index] = sp;
             return sp.lower;
         } else if (roughScore <= a) {
             bestScore = std::max(bestScore, roughScore);
@@ -96,7 +88,7 @@ static double negaScout(Bitboard p, Bitboard o, double alpha, double beta, bool 
 
             if (bestScore >= beta) {
                 sp.lower = std::max(sp.lower, bestScore);
-                transpositonTable[index] = sp;
+                currentTT[index] = sp;
                 return sp.lower;
             }
         }
@@ -109,13 +101,27 @@ static double negaScout(Bitboard p, Bitboard o, double alpha, double beta, bool 
 
     if (bestScore <= alpha) {
         sp.upper = std::min(sp.upper, bestScore);
-        transpositonTable[index] = sp;
+        currentTT[index] = sp;
         return sp.upper;
     } else {
         sp.lower = sp.upper = bestScore;
-        transpositonTable[index] = sp;
+        currentTT[index] = sp;
         return sp.lower;
     }
+}
+
+// 最終的に、prevTTに並べ替え用の結果を書き込んで、currentTTは初期化した状態にする。
+static void iterativeDeepening(Bitboard p, Bitboard o, int depth) {
+    std::memset(TT1, 0, sizeof(TT1));
+    std::memset(TT2, 0, sizeof(TT2));
+
+    int d = 3;
+    do {
+        negaScout(p, o, -EvalInf, EvalInf, false, d);
+        std::swap(currentTT, previousTT);
+        std::memset(currentTT, 0, TTSize * sizeof(SearchedPosition<double>));
+        ++d;
+    } while (d <= depth);
 }
 
 static double alphabeta(Bitboard p, Bitboard o, double alpha, double beta, bool passed, int depth) {
@@ -144,7 +150,7 @@ static double alphabeta(Bitboard p, Bitboard o, double alpha, double beta, bool 
 }
 
 std::vector<MoveWithScore> evalAllMoves(Bitboard p, Bitboard o, int depth) {
-    clearTranspositionTable();
+    iterativeDeepening(p, o, depth);
 
     std::vector<MoveWithScore> movesWithScore;
     Bitboard moves = getMoves(p, o);
@@ -153,7 +159,6 @@ std::vector<MoveWithScore> evalAllMoves(Bitboard p, Bitboard o, int depth) {
         Bitboard sqbit = moves & -moves;
         moves ^= sqbit;
         Bitboard flip = getFlip(p, o, sqbit);
-
         int sq = tzcnt(sqbit);
         double score = -negaScout(o ^ flip, p ^ flip ^ sqbit, -EvalInf, EvalInf, false, depth - 1);
         double score_ = -alphabeta(o ^ flip, p ^ flip ^ sqbit, -EvalInf, EvalInf, false, depth - 1);
@@ -165,7 +170,7 @@ std::vector<MoveWithScore> evalAllMoves(Bitboard p, Bitboard o, int depth) {
 }
 
 int chooseBestMove(Bitboard p, Bitboard o, int depth) {
-    clearTranspositionTable();
+    iterativeDeepening(p, o, depth);
 
     double bestScore = -EvalInf;
     int sq = -1;

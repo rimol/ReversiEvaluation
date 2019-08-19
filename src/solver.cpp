@@ -59,20 +59,7 @@ static int negamax(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
     return bestScore;
 }
 
-struct SearchedPosition {
-    // ミニマックス値の存在範囲
-    int upper;
-    int lower;
-
-    Bitboard p;
-    Bitboard o;
-
-    bool correspondsTo(Bitboard _p, Bitboard _o) {
-        return _p == p && _o == o;
-    }
-};
-
-SearchedPosition transpositionTable[TTSize];
+SearchedPosition<int> transpositionTable[TTSize];
 
 static int negascout(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
     if (popcount(p | o) >= 58)
@@ -87,7 +74,7 @@ static int negascout(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
 
     // テーブルから前の探索結果を取り出し、vの範囲を狭めて効率化を図る.
     const int index = getIndex(p, o);
-    SearchedPosition sp = transpositionTable[index];
+    auto sp = transpositionTable[index];
 
     if (sp.correspondsTo(p, o)) {
         // カット
@@ -106,7 +93,7 @@ static int negascout(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
     else
         sp = {64, -64, p, o};
 
-    std::vector<CandidateMove> orderedMoves;
+    std::vector<CandidateMove<int>> orderedMoves;
     while (moves) {
         Bitboard sqbit = moves & -moves;
         moves ^= sqbit;
@@ -135,7 +122,7 @@ static int negascout(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
 
     int a = std::max(bestScore, alpha); // 探索窓: (beta(bestScore, alpha), beta) minはつかうので改変しない
     for (int i = 1; i < orderedMoves.size(); ++i) {
-        CandidateMove &cm = orderedMoves[i];
+        auto &cm = orderedMoves[i];
         // (1) v <= roughScore <= a
         // (2) a < roughScore <= v
         // のどちらかを満たす
