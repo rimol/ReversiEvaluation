@@ -3,13 +3,42 @@
 #include "search.h"
 #include <cassert>
 
+static double negaAlpha(Bitboard p, Bitboard o, double alpha, double beta, bool passed, int depth) {
+    Bitboard moves = getMoves(p, o);
+    if (moves == 0ULL)
+        return passed ? evaluate(p, o) : -negaAlpha(o, p, -beta, -alpha, true, depth);
+
+    if (depth == 0)
+        return evaluate(p, o);
+
+    double bestScore = -EvalInf;
+
+    while (moves) {
+        Bitboard sqbit = moves & -moves;
+        Bitboard flip = getFlip(p, o, sqbit);
+
+        double score = -negaAlpha(o ^ flip, p ^ flip ^ sqbit, -beta, -bestScore, false, depth - 1);
+        if (score >= beta)
+            return score;
+
+        bestScore = std::max(score, bestScore);
+        moves ^= sqbit;
+    }
+
+    return bestScore;
+}
+
 static SearchedPosition<double> TT1[TTSize], TT2[TTSize];
 
 static SearchedPosition<double> *currentTT = TT1;
 static SearchedPosition<double> *previousTT = TT2;
 
 // previousTTを並べ替えに、currentTTを結果書き込みに使う
+// Searched Position取り出しを参照でするとなぜかバグる(alphabetaと結果がずれる).
 static double negaScout(Bitboard p, Bitboard o, double alpha, double beta, bool passed, int depth) {
+    if (depth <= 3)
+        return negaAlpha(p, o, alpha, beta, passed, depth);
+
     Bitboard moves = getMoves(p, o);
     if (moves == 0ULL && !passed)
         return -negaScout(o, p, -beta, -alpha, true, depth);
@@ -112,41 +141,19 @@ static double negaScout(Bitboard p, Bitboard o, double alpha, double beta, bool 
 
 // 最終的に、prevTTに並べ替え用の結果を書き込んで、currentTTは初期化した状態にする。
 static void iterativeDeepening(Bitboard p, Bitboard o, int depth) {
+    constexpr int BeginningDepth = 3;
+
+    if (depth < BeginningDepth)
+        return;
+
     std::memset(TT1, 0, sizeof(TT1));
     std::memset(TT2, 0, sizeof(TT2));
 
-    int d = 3;
-    do {
+    for (int d = BeginningDepth; d <= depth; ++d) {
         negaScout(p, o, -EvalInf, EvalInf, false, d);
         std::swap(currentTT, previousTT);
         std::memset(currentTT, 0, TTSize * sizeof(SearchedPosition<double>));
-        ++d;
-    } while (d <= depth);
-}
-
-static double alphabeta(Bitboard p, Bitboard o, double alpha, double beta, bool passed, int depth) {
-    Bitboard moves = getMoves(p, o);
-    if (moves == 0ULL)
-        return passed ? evaluate(p, o) : -alphabeta(o, p, -beta, -alpha, true, depth);
-
-    if (depth == 0)
-        return evaluate(p, o);
-
-    double bestScore = -EvalInf;
-
-    while (moves) {
-        Bitboard sqbit = moves & -moves;
-        Bitboard flip = getFlip(p, o, sqbit);
-
-        double score = -alphabeta(o ^ flip, p ^ flip ^ sqbit, -beta, -bestScore, false, depth - 1);
-        if (score >= beta)
-            return score;
-
-        bestScore = std::max(score, bestScore);
-        moves ^= sqbit;
     }
-
-    return bestScore;
 }
 
 std::vector<MoveWithScore> evalAllMoves(Bitboard p, Bitboard o, int depth) {
@@ -161,7 +168,7 @@ std::vector<MoveWithScore> evalAllMoves(Bitboard p, Bitboard o, int depth) {
         Bitboard flip = getFlip(p, o, sqbit);
         int sq = tzcnt(sqbit);
         double score = -negaScout(o ^ flip, p ^ flip ^ sqbit, -EvalInf, EvalInf, false, depth - 1);
-        double score_ = -alphabeta(o ^ flip, p ^ flip ^ sqbit, -EvalInf, EvalInf, false, depth - 1);
+        double score_ = -negaAlpha(o ^ flip, p ^ flip ^ sqbit, -EvalInf, EvalInf, false, depth - 1);
         assert(score == score_);
         movesWithScore.push_back({sq, score});
     }
