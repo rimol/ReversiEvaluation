@@ -90,10 +90,10 @@ double NegaScoutEngine::negaScout(Bitboard p, Bitboard o, double alpha, double b
     if (moves == 0ULL)
         return passed ? (popcount(p) - popcount(o)) : -negaScout(o, p, -beta, -alpha, true, depth);
 
-    SearchedPosition<double> sp;
-    if (transpositionTable.count({p, o})) {
-        sp = transpositionTable[{p, o}];
-
+    const PositionKey key = {p, o};
+    bool isSearched = transpositionTable.count(key);
+    SearchedPosition<double> &sp = transpositionTable[key];
+    if (isSearched) {
         if (sp.lower >= beta)
             return sp.lower;
         if (sp.upper <= alpha)
@@ -123,9 +123,7 @@ double NegaScoutEngine::negaScout(Bitboard p, Bitboard o, double alpha, double b
 
     double bestScore = -negaScout(orderedMoves[0].nextP, orderedMoves[0].nextO, -beta, -alpha, false, depth - 1);
     if (bestScore >= beta) {
-        sp.lower = std::max(sp.lower, bestScore);
-        transpositionTable[{p, o}] = sp;
-        return sp.lower;
+        return sp.lower = std::max(sp.lower, bestScore);
     }
 
     double a = std::max(alpha, bestScore);
@@ -144,18 +142,14 @@ double NegaScoutEngine::negaScout(Bitboard p, Bitboard o, double alpha, double b
         double roughScore = -negaScout(cm.nextP, cm.nextO, -a - NWSWindowSize, -a, false, depth - 1);
 
         if (roughScore >= beta) {
-            sp.lower = std::max(roughScore, sp.lower);
-            transpositionTable[{p, o}] = sp;
-            return sp.lower;
+            return sp.lower = std::max(roughScore, sp.lower);
         } else if (roughScore <= a) {
             bestScore = std::max(bestScore, roughScore);
         } else if (roughScore >= (a + NWSWindowSize)) {
             a = bestScore = -negaScout(cm.nextP, cm.nextO, -beta, -roughScore, false, depth - 1);
 
             if (bestScore >= beta) {
-                sp.lower = std::max(sp.lower, bestScore);
-                transpositionTable[{p, o}] = sp;
-                return sp.lower;
+                return sp.lower = std::max(sp.lower, bestScore);
             }
         }
         // (a, a+WindowSize)にroughScoreがあった場合。
@@ -166,17 +160,14 @@ double NegaScoutEngine::negaScout(Bitboard p, Bitboard o, double alpha, double b
     }
 
     if (bestScore <= alpha) {
-        sp.upper = std::min(sp.upper, bestScore);
-        transpositionTable[{p, o}] = sp;
-        return sp.upper;
+        return sp.upper = std::min(sp.upper, bestScore);
     } else {
-        sp.lower = sp.upper = bestScore;
-        transpositionTable[{p, o}] = sp;
-        return sp.lower;
+        return sp.lower = sp.upper = bestScore;
     }
 }
 
 std::vector<MoveWithScore> NegaScoutEngine::evalAllMoves(Bitboard p, Bitboard o, int depth) {
+    transpositionTable.clear();
     std::vector<MoveWithScore> movesWithScore;
     Bitboard moves = getMoves(p, o);
 
@@ -185,6 +176,8 @@ std::vector<MoveWithScore> NegaScoutEngine::evalAllMoves(Bitboard p, Bitboard o,
         moves ^= sqbit;
         Bitboard flip = getFlip(p, o, sqbit);
         double score = -negaScout(o ^ flip, p ^ flip ^ sqbit, -EvalInf, EvalInf, false, depth - 1);
+        // double score_ = -negaAlpha(o ^ flip, p ^ flip ^ sqbit, -EvalInf, EvalInf, false, depth - 1);
+        // assert(score == score_);
         int sq = tzcnt(sqbit);
         movesWithScore.push_back({sq, score});
     }
@@ -193,6 +186,7 @@ std::vector<MoveWithScore> NegaScoutEngine::evalAllMoves(Bitboard p, Bitboard o,
 }
 
 int NegaScoutEngine::chooseMove(Bitboard p, Bitboard o, int depth) {
+    transpositionTable.clear();
     double bestScore = -EvalInf;
     int sq = -1;
 
