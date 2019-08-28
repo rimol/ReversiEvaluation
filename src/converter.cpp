@@ -319,21 +319,25 @@ void convertRecgenProducts(const std::string &inputFilepath, const std::string &
     }
 
     std::string recordStr;
+    int numConverted = 0;
     while (getline(ifs, recordStr)) {
         Reversi reversi;
         std::vector<Reversi> pos;
+
+        bool success = true;
 
         for (int i = 0; i < recordStr.size() - 1; i += 2) {
             if (reversi.move(toNumericSQ(recordStr[i], recordStr[i + 1]))) {
                 pos.push_back(reversi);
             } else {
                 std::cerr << "Can't convert: " << recordStr << std::endl;
+                success = false;
                 break;
             }
         }
 
         if (reversi.isFinished) {
-            int result = pos.back().stoneCount();
+            int result = popcount(pos.back().p) - popcount(pos.back().o);
             Color resultColor = pos.back().c;
             for (int i = randomDepth - 1; i < pos.size(); ++i) {
                 Record record(pos[i].p, pos[i].o, result);
@@ -342,6 +346,8 @@ void convertRecgenProducts(const std::string &inputFilepath, const std::string &
                 ofs[i].write((char *)&record, sizeof(Record));
             }
         }
+
+        numConverted += (int)success;
     }
 }
 
