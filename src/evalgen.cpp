@@ -10,54 +10,65 @@
 #include <set>
 #include <vector>
 
-#define FOREACH_FEATURE_VALUE(Statement)            \
-    for (int i = 0; i < GroupNum; ++i) {            \
-        for (int j = 0; j < EvalArrayLength; ++j) { \
-            auto &fv = featureValues[i][j];         \
-            Statement                               \
-        }                                           \
+#define FOREACH_FEATURE_VALUE(Statement)               \
+    for (int i = 0; i < usedPattern.numGroup(); ++i) { \
+        for (int j = 0; j < MaxNumPattern; ++j) {      \
+            auto &fv = featureValues[i][j];            \
+            Statement                                  \
+        }                                              \
     }
 
-#define FOREACH_FEATURE_IN(_recordEx, Statement)                              \
-    for (int i = 0; i < FeatureNum; ++i) {                                    \
-        int _g = Feature.group[i];                                            \
-        Bitboard _p = (_recordEx).playerRotatedBB[Feature.rotationType[i]];   \
-        Bitboard _o = (_recordEx).opponentRotatedBB[Feature.rotationType[i]]; \
-        auto &fv = featureValues[_g][extract(_p, _o, _g)];                    \
-        Statement                                                             \
+#define FOREACH_FEATURE_IN(_recordEx, Statement)                                  \
+    for (int i = 0; i < usedPattern.numPattern(); ++i) {                          \
+        int _g = usedPattern.group(i);                                            \
+        Bitboard _p = (_recordEx).playerRotatedBB[usedPattern.rotationType(i)];   \
+        Bitboard _o = (_recordEx).opponentRotatedBB[usedPattern.rotationType(i)]; \
+        auto &fv = featureValues[_g][usedPattern.extract(_p, _o, _g)];            \
+        Statement                                                                 \
     }
+
+EvalGen::EvalGen(int numStages, const std::string &patternName) : numStages(numStages), patternName(patternName), usedPattern(Patterns.at(patternName)) {
+    assert(60 % numStages == 0);
+    stageInterval = 60 / numStages;
+    featureValues = new FeatureValue *[usedPattern.numGroup()];
+    for (int i = 0; i < usedPattern.numGroup(); ++i) {
+        featureValues[i] = new FeatureValue[MaxNumPattern];
+    }
+}
+
+EvalGen::~EvalGen() {
+    for (int i = 0; i < usedPattern.numGroup(); ++i) {
+        delete[] featureValues[i];
+    }
+    delete featureValues;
+}
 
 constexpr double beta = 0.01;
 
-// 各特徴の評価値、評価値の更新分、ステップサイズをまとめて持つ
-struct FeatureValue {
-    double weight = 0.0;
-    double update = 0.0;
-    double stepSize = 0.0;
-};
-
-static FeatureValue featureValues[GroupNum][EvalArrayLength];
-
-static inline void fillAllArraysAndVarialblesWithZero() {
-    std::fill((FeatureValue *)featureValues, (FeatureValue *)(featureValues + GroupNum), FeatureValue());
+void EvalGen::clearFeatureValues() {
+    for (int i = 0; i < usedPattern.numGroup(); ++i) {
+        for (int j = 0; j < MaxNumPattern; ++j) {
+            featureValues[i][j] = FeatureValue();
+        }
+    }
 }
 
 // y - e
-static inline double evalLoss(const RecordEx &recordEx) {
+inline double EvalGen::evalLoss(const RecordEx &recordEx) {
     double e = 0.0;
     FOREACH_FEATURE_IN(recordEx, { e += fv.weight; })
     return (double)recordEx.result - e;
 }
 
-static inline void applyUpdatesOfEvalValues() {
+inline void EvalGen::applyUpdatesOfEvalValues() {
     FOREACH_FEATURE_VALUE(
         fv.weight += fv.update * fv.stepSize;
         fv.update = 0.0;)
 }
 
 // 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
-static double calculateEvaluationValue(const std::vector<std::string> &recordFilepaths) {
-    fillAllArraysAndVarialblesWithZero();
+double EvalGen::calculateEvaluationValue(const std::vector<std::string> &recordFilepaths) {
+    clearFeatureValues();
 
     int numUsedRecords = 0;
 
@@ -124,15 +135,19 @@ static double calculateEvaluationValue(const std::vector<std::string> &recordFil
     }
 }
 
-void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFolderPath, int first, int last) {
-    if (first <= last && 1 <= first && last <= NumStages) {
-        outputFolderPath = createCurrentTimeFolderIn(outputFolderPath);
+void EvalGen::run(const std::string &recordsFolderPath, const std::string &outputFolderPath, int first, int last) {
+    if (first <= last && 1 <= first && last <= numStages) {
+        std::string saveFolderPath = createCurrentTimeFolderIn(outputFolderPath);
+        // info.txt
+        std::ofstream info_ofs(addFileNameAtEnd(saveFolderPath, "info", "txt"));
+        info_ofs << patternName << " " << numStages;
+        info_ofs.close();
         // 分散を保存するファイルを作る
-        std::ofstream vofs(addFileNameAtEnd(outputFolderPath, "variance", "txt"));
+        std::ofstream vofs(addFileNameAtEnd(saveFolderPath, "variance", "txt"));
 
         for (int i = first; i <= last; ++i) {
             std::vector<std::string> folderpaths;
-            for (int j = 0; j < StageInterval; ++j) {
+            for (int j = 0; j < stageInterval; ++j) {
                 folderpaths.push_back(addFileNameAtEnd(recordsFolderPath, std::to_string(i * 4 - j), "bin"));
             }
 
@@ -141,7 +156,7 @@ void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFo
             // 保存～
             vofs << i << ".bin: " << variance << std::endl;
 
-            std::ofstream ofs(addFileNameAtEnd(outputFolderPath, std::to_string(i), "bin"), std::ios::binary);
+            std::ofstream ofs(addFileNameAtEnd(saveFolderPath, std::to_string(i), "bin"), std::ios::binary);
             // 評価値のみ保存したいので仕方なしループ
             FOREACH_FEATURE_VALUE(
                 ofs.write((char *)&fv.weight, sizeof(double));)
@@ -149,32 +164,32 @@ void generateEvaluationFiles(std::string recordsFolderPath, std::string outputFo
     }
 }
 
-void printPatternCoverage(const std::string &recordsFolderPath) {
-    for (int i = 0; i < NumStages; ++i) {
-        std::set<int> occurrence[GroupNum];
-        for (int j = i * StageInterval; j < (i + 1) * StageInterval; ++j) {
-            std::ifstream ifs(addFileNameAtEnd(recordsFolderPath, std::to_string(j + 1), "bin"), std::ios::ate | std::ios::binary);
-            int filesize_byte = ifs.tellg();
-            ifs.seekg(0);
-            std::vector<Record> records(filesize_byte / sizeof(Record));
-            ifs.read((char *)&records[0], filesize_byte);
+// void printPatternCoverage(const std::string &recordsFolderPath) {
+//     for (int i = 0; i < NumStages; ++i) {
+//         std::set<int> occurrence[GroupNum];
+//         for (int j = i * StageInterval; j < (i + 1) * StageInterval; ++j) {
+//             std::ifstream ifs(addFileNameAtEnd(recordsFolderPath, std::to_string(j + 1), "bin"), std::ios::ate | std::ios::binary);
+//             int filesize_byte = ifs.tellg();
+//             ifs.seekg(0);
+//             std::vector<Record> records(filesize_byte / sizeof(Record));
+//             ifs.read((char *)&records[0], filesize_byte);
 
-            for (Record &record : records) {
-                RecordEx recodeEx(record);
-                for (int k = 0; k < FeatureNum; ++k) {
-                    int group = Feature.group[k];
-                    Bitboard rotatedP = recodeEx.playerRotatedBB[Feature.rotationType[k]];
-                    Bitboard rotatedO = recodeEx.opponentRotatedBB[Feature.rotationType[k]];
+//             for (Record &record : records) {
+//                 RecordEx recodeEx(record);
+//                 for (int k = 0; k < FeatureNum; ++k) {
+//                     int group = Feature.group[k];
+//                     Bitboard rotatedP = recodeEx.playerRotatedBB[Feature.rotationType[k]];
+//                     Bitboard rotatedO = recodeEx.opponentRotatedBB[Feature.rotationType[k]];
 
-                    int pattern = convert(pext(rotatedP, Feature.masks[group]), pext(rotatedO, Feature.masks[group]));
-                    occurrence[group].insert(pattern);
-                }
-            }
-        }
+//                     int pattern = convert(pext(rotatedP, Feature.masks[group]), pext(rotatedO, Feature.masks[group]));
+//                     occurrence[group].insert(pattern);
+//                 }
+//             }
+//         }
 
-        for (int j = 0; j < GroupNum; ++j) {
-            int numAllPattern = integerPow(3, popcount(Feature.masks[j]));
-            std::cout << "Stage " << i << ", Group " << j << ": " << ((double)occurrence[j].size() / (double)numAllPattern * 100.0) << "%" << std::endl;
-        }
-    }
-}
+//         for (int j = 0; j < GroupNum; ++j) {
+//             int numAllPattern = integerPow(3, popcount(Feature.masks[j]));
+//             std::cout << "Stage " << i << ", Group " << j << ": " << ((double)occurrence[j].size() / (double)numAllPattern * 100.0) << "%" << std::endl;
+//         }
+//     }
+// }

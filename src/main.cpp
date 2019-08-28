@@ -34,7 +34,7 @@ void doReversi() {
     std::cout << "Enter a folder path that includes eval files:";
     std::cin >> evalValuesFolderPath;
 
-    loadEvalValues(evalValuesFolderPath);
+    NegaScoutEngine engine(evalValuesFolderPath);
 
     while (!reversi.isFinished) {
         reversi.print();
@@ -47,7 +47,7 @@ void doReversi() {
                 std::cin >> pos;
                 sq = AlphabetToNumber[pos[0]] + (7 - (pos[1] - '1')) * 8;
             } else {
-                auto movesWithScore = evalAllMoves(reversi.p, reversi.o, depth);
+                auto movesWithScore = engine.evalAllMoves(reversi.p, reversi.o, depth);
                 double bestScore = -100000.0;
                 for (auto &ms : movesWithScore) {
                     std::cout << convertToLegibleSQ(ms.move) << ": " << ms.score << std::endl;
@@ -87,15 +87,18 @@ void doRecGen() {
     std::cout << "Folder where evaluation files you want to use exist: ";
     std::cin >> evalFolderpath;
 
-    loadEvalValues(evalFolderpath);
-    generateRecords(n, randomDepth, searchDepth, exactDepth, saveFolderpath);
+    generateRecords(n, randomDepth, searchDepth, exactDepth, evalFolderpath, saveFolderpath);
 
     std::cout << "Done!\n";
 }
 
 void doEvalGen() {
-    std::string recordsFolderPath, outputFolderPath;
-    int first, last;
+    std::string patternName, recordsFolderPath, outputFolderPath;
+    int numStages, first, last;
+    std::cout << "Pattern name:";
+    std::cin >> patternName;
+    std::cout << "The number of stages:";
+    std::cin >> numStages;
     std::cout << "Enter a folder path where records are stored:";
     std::cin >> recordsFolderPath;
     std::cout << "Enter a folder path where you want to save the data:";
@@ -105,10 +108,12 @@ void doEvalGen() {
     std::cout << "last: ";
     std::cin >> last;
 
-    printPatternCoverage(recordsFolderPath);
+    // printPatternCoverage(recordsFolderPath);
 
-    if (first <= last)
-        generateEvaluationFiles(recordsFolderPath, outputFolderPath, first, last);
+    if (first <= last) {
+        EvalGen evalGen(numStages, patternName);
+        evalGen.run(recordsFolderPath, outputFolderPath, first, last);
+    }
 
     std::cout << "Done!" << std::endl;
 }
@@ -124,9 +129,7 @@ void doAutoPlay() {
     std::cout << "Enter a folder path that includes eval files:";
     std::cin >> evalValuesFolderPath;
 
-    loadEvalValues(evalValuesFolderPath);
-
-    play(N, depth);
+    play(N, depth, evalValuesFolderPath);
 }
 
 void doDatabaseConversion() {
@@ -185,8 +188,23 @@ void doToRec() {
     std::cout << "Done!" << std::endl;
 }
 
+void doComp() {
+    int n;
+    std::string weightFolderpath1, weightFolderpath2;
+
+    std::cout << "How many plays you want to make?:";
+    std::cin >> n;
+    std::cout << "weight folder path(1):";
+    std::cin >> weightFolderpath1;
+    std::cout << "weight folder path(2):";
+    std::cin >> weightFolderpath2;
+
+    runSelfPlay(n, weightFolderpath1, weightFolderpath2);
+    std::cout << "Done!" << std::endl;
+}
+
 int main() {
-    initSymmetricPattern();
+    initToBase3();
     while (true) {
         std::cout << "Enter a command:";
         std::string command;
@@ -204,6 +222,8 @@ int main() {
             doAutoPlay();
         else if (command == "conv")
             doDatabaseConversion();
+        else if (command == "evalcomp")
+            doComp();
         else if (command == "mergerec")
             doRecordMerge();
         else if (command == "fixrec")

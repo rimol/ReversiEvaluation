@@ -1,5 +1,6 @@
 #include "eval.h"
 #include "bitboard.h"
+#include "pattern.h"
 #include "util.h"
 #include <algorithm>
 #include <fstream>
@@ -7,80 +8,58 @@
 #include <string>
 #include <vector>
 
-int SymmetricPattern[GroupNum][EvalArrayLength];
-void initSymmetricPattern() {
-    int flipSQ[2][64] = {};
+using std::cerr;
+using std::endl;
 
-    for (int i = 0; i < 64; ++i) {
-        int x = i % 8;
-        int y = i / 8;
-        flipSQ[0][i] = x + (7 - y) * 8;       // vertical
-        flipSQ[1][i] = (7 - y) + (7 - x) * 8; // diagonal
+// TODO: パターンの種類によってMaxNumPatternのところを変える
+// symmetricなパターンを詰める
+PatternEvaluator::PatternEvaluator(const std::string &weightFolderpath) {
+    auto infoFilepath = addFileNameAtEnd(weightFolderpath, "info", "txt");
+    std::ifstream ifs(infoFilepath);
+
+    std::string patternName;
+    ifs >> patternName;
+    usedPattern = &Patterns.at(patternName);
+
+    ifs >> numStages;
+    assert(60 % numStages == 0);
+    stageInterval = 60 / numStages;
+
+    ifs.close();
+
+    weights = new double **[numStages];
+    for (int i = 0; i < numStages; ++i) {
+        weights[i] = new double *[usedPattern->numGroup()];
+        for (int j = 0; j < usedPattern->numGroup(); ++j) {
+            weights[i][j] = new double[MaxNumPattern];
+        }
     }
 
-    // 特徴自体の対称性
-    for (int i = 0; i < GroupNum; ++i) {
-        Bitboard v = flipVertical(Feature.masks[i]);
-        Bitboard d = flipDiagonalA8H1(Feature.masks[i]);
-        if (Feature.masks[i] == v || Feature.masks[i] == d) {
-            int flipType = Feature.masks[i] == v ? 0 : 1;
-            for (int j = 0; j < integerPow(3, popcount(Feature.masks[i])); ++j) {
-                int k = j;
-                Bitboard m = Feature.masks[i];
-                std::vector<std::pair<int, int>> digits;
-                while (m != 0ULL) {
-                    digits.push_back({flipSQ[flipType][tzcnt(m)], k % 3});
-                    k /= 3;
-                    m &= m - 1ULL;
-                }
-                std::sort(digits.begin(), digits.end(), std::greater<std::pair<int, int>>());
-                int l = 0;
-                for (int i = 0; i < digits.size(); ++i) {
-                    l *= 3;
-                    l += digits[i].second;
-                }
-
-                SymmetricPattern[i][j] = SymmetricPattern[i][l] = std::min(j, l);
-            }
-        } else {
-            for (int j = 0; j < EvalArrayLength; ++j) {
-                SymmetricPattern[i][j] = j;
-            }
+    for (int i = 0; i < numStages; ++i) {
+        ifs.open(addFileNameAtEnd(weightFolderpath, std::to_string(i + 1), "bin"), std::ios::binary);
+        for (int j = 0; j < usedPattern->numGroup(); ++j) {
+            ifs.read((char *)weights[i][j], sizeof(double) * MaxNumPattern);
         }
+        ifs.close();
     }
 }
 
-static double evaluationValues[NumStages][GroupNum][EvalArrayLength];
-
-void loadEvalValues(std::string evalValuesFolderPath) {
-    for (int i = 0; i < NumStages; ++i) {
-        std::ifstream ifs(addFileNameAtEnd(evalValuesFolderPath, std::to_string(i + 1), "bin"), std::ios::binary);
-        ifs.read((char *)evaluationValues[i], sizeof(double) * GroupNum * EvalArrayLength);
-    }
-
-    // 得点充填率を出力
-    for (int i = 0; i < GroupNum; ++i) {
-        for (int j = 0; j < NumStages; ++j) {
-            int numAllPattern = integerPow(3, popcount(Feature.masks[i]));
-            int numNonZeroPattern = 0;
-            for (int k = 0; k < numAllPattern; ++k) {
-                numNonZeroPattern += evaluationValues[j][i][k] != 0;
-            }
-
-            std::cout << "Stage " << j << ", Group " << i << ": " << ((double)numNonZeroPattern / (double)numAllPattern * 100.0) << std::endl;
+PatternEvaluator::~PatternEvaluator() {
+    for (int i = 0; i < numStages; ++i) {
+        for (int j = 0; j < usedPattern->numGroup(); ++j) {
+            delete[] weights[i][j];
         }
+        delete[] weights[i];
     }
+    delete[] weights;
 }
 
-double evaluate(Bitboard p, Bitboard o) {
-    // これ、差を返すようにしたほうがいいかな...?
-    if (popcount(p) == 0) {
-        return -EvalInf;
-    }
+double PatternEvaluator::evaluate(Bitboard p, Bitboard o) const {
+    if (popcount(p) == 0)
+        return -popcount(o);
 
-    if (popcount(o) == 0) {
-        return EvalInf;
-    }
+    if (popcount(o) == 0)
+        return popcount(p);
 
     Bitboard playerRotatedBB[8], opponentRotatedBB[8];
     rotateAndFlipBB(p, playerRotatedBB);
@@ -89,18 +68,18 @@ double evaluate(Bitboard p, Bitboard o) {
     int t = getStage(p, o);
 
     double e = 0.0;
-    for (int i = 0; i < FeatureNum; ++i) {
-        int g = Feature.group[i];
-        Bitboard p_ = playerRotatedBB[Feature.rotationType[i]];
-        Bitboard o_ = opponentRotatedBB[Feature.rotationType[i]];
+    for (int i = 0; i < usedPattern->numPattern(); ++i) {
+        int group = usedPattern->group(i);
+        Bitboard p_ = playerRotatedBB[usedPattern->rotationType(i)];
+        Bitboard o_ = opponentRotatedBB[usedPattern->rotationType(i)];
 
-        e += evaluationValues[t][g][extract(p_, o_, g)];
+        e += weights[t][group][usedPattern->extract(p_, o_, group)];
     }
 
     return e;
 }
 
-double evaluate_classic(Bitboard p, Bitboard o) {
+double ClassicEvaluator::evaluate(Bitboard p, Bitboard o) const {
     double squareValue[] = {
         30, -12, 0, -1, -1, 0, -12, 30,     // これはコード補完で
         -12, -15, -3, -3, -3, -3, -15, -12, // 左の配列が縦に展開されないように
@@ -177,6 +156,6 @@ double evaluate_classic(Bitboard p, Bitboard o) {
         }
     }
 
-    int stage = getStage(p, o);
+    int stage = (popcount(p | o) - 4 - 1) / 4;
     return weightNumStone[stage] * (numP - numO) + weightSquareValue[stage] * (valueP - valueO) + weightMobility[stage] * (mobilityP - mobilityO) + weightStability[stage] * (stabilityP - stabilityO);
 }

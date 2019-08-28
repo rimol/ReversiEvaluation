@@ -11,7 +11,7 @@
 #include <time.h>
 #include <vector>
 
-void generateRecords(int n, int randomDepth, int searchDepth, int exactDepth, const std::string &saveFolderpath) {
+void generateRecords(int n, int randomDepth, int searchDepth, int exactDepth, const std::string &weightFolderpath, const std::string &saveFolderpath) {
     auto currentTime = time(nullptr);
     auto local = localtime(&currentTime);
     std::stringstream ss;
@@ -27,17 +27,17 @@ void generateRecords(int n, int randomDepth, int searchDepth, int exactDepth, co
     // バイナリではなくテキストで書き込む.
     std::ofstream ofs(addFileNameAtEnd(saveFolderpath, ss.str(), "txt"));
 
-    std::random_device rnd;
-    std::mt19937 mt(rnd());
+    RandomEngine randomEngine;
+    NegaScoutEngine negaScoutEngine(weightFolderpath);
 
     for (int i = 0; i < n; ++i) {
         Reversi reversi;
         while (!reversi.isFinished) {
             int sq;
             if ((reversi.stoneCount() - 4) < randomDepth) {
-                sq = chooseRandomMove(reversi.p, reversi.o, mt);
+                sq = randomEngine.chooseMove(reversi.p, reversi.o, 0);
             } else if ((reversi.stoneCount() + exactDepth) < 64) {
-                sq = chooseBestMove(reversi.p, reversi.o, searchDepth);
+                sq = negaScoutEngine.chooseMove(reversi.p, reversi.o, searchDepth);
             } else {
                 break;
             }
