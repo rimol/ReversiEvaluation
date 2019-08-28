@@ -1,3 +1,5 @@
+#pragma once
+
 #include "bitboard.h"
 
 template <typename T>
