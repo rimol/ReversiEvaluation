@@ -163,6 +163,38 @@ constexpr Bitboard rotateRightBy90(Bitboard x) {
 
 // 打てるマスのビットを立てる
 inline Bitboard getMoves(Bitboard p, Bitboard o) {
+#ifndef __EMSCRIPTEN__
+    const __m256i p4 = _mm256_broadcastq_epi64(_mm_cvtsi64_si128(p));
+    const __m256i o4 = _mm256_broadcastq_epi64(_mm_cvtsi64_si128(o));
+    const __m256i mask4 = {0x7e7e7e7e7e7e7e7eULL, 0x00ffffffffffff00ULL, 0x007e7e7e7e7e7e00ULL, 0x007e7e7e7e7e7e00ULL};
+    __m256i shift4 = {1, 8, 9, 7};
+    __m256i t4 = _mm256_load_si256(&p4);
+    __m256i mo4 = _mm256_and_si256(o4, mask4);
+    t4 = _mm256_or_si256(t4, _mm256_and_si256(_mm256_sllv_epi64(t4, shift4), mo4));
+    mo4 = _mm256_and_si256(mo4, _mm256_sllv_epi64(mo4, shift4));
+    shift4 = _mm256_slli_epi64(shift4, 1);
+    t4 = _mm256_or_si256(t4, _mm256_and_si256(_mm256_sllv_epi64(t4, shift4), mo4));
+    mo4 = _mm256_and_si256(mo4, _mm256_sllv_epi64(mo4, shift4));
+    shift4 = _mm256_slli_epi64(shift4, 1);
+    t4 = _mm256_or_si256(t4, _mm256_and_si256(_mm256_sllv_epi64(t4, shift4), mo4));
+    shift4 = _mm256_srli_epi64(shift4, 2);
+    __m256i moves4 = _mm256_sllv_epi64(_mm256_xor_si256(t4, p4), shift4);
+
+    t4 = _mm256_load_si256(&p4);
+    mo4 = _mm256_and_si256(o4, mask4);
+    t4 = _mm256_or_si256(t4, _mm256_and_si256(_mm256_srlv_epi64(t4, shift4), mo4));
+    mo4 = _mm256_and_si256(mo4, _mm256_srlv_epi64(mo4, shift4));
+    shift4 = _mm256_slli_epi64(shift4, 1);
+    t4 = _mm256_or_si256(t4, _mm256_and_si256(_mm256_srlv_epi64(t4, shift4), mo4));
+    mo4 = _mm256_and_si256(mo4, _mm256_srlv_epi64(mo4, shift4));
+    shift4 = _mm256_slli_epi64(shift4, 1);
+    t4 = _mm256_or_si256(t4, _mm256_and_si256(_mm256_srlv_epi64(t4, shift4), mo4));
+    shift4 = _mm256_srli_epi64(shift4, 2);
+    moves4 = _mm256_or_si256(moves4, _mm256_srlv_epi64(_mm256_xor_si256(t4, p4), shift4));
+
+    __m128i moves2 = _mm_or_si128(_mm256_extracti128_si256(moves4, 0), _mm256_extracti128_si256(moves4, 1));
+    return (_mm_extract_epi64(moves2, 0) | _mm_extract_epi64(moves2, 1)) & ~(p | o);
+#elif
     Bitboard moves = 0ULL;
     Bitboard blank = ~(p | o);
     // マスク済み敵石のビットボード
@@ -237,10 +269,42 @@ inline Bitboard getMoves(Bitboard p, Bitboard o) {
     moves |= (t ^ p) >> 7 & blank;
 
     return moves;
+#endif
 }
 
 // ひっくり返す石があるマスのビットを立てる
 inline Bitboard getFlip(Bitboard p, Bitboard o, Bitboard sqbit) {
+#ifndef __EMSCRIPTEN__
+    const __m256i p4 = _mm256_broadcastq_epi64(_mm_cvtsi64_si128(p));
+    const __m256i o4 = _mm256_broadcastq_epi64(_mm_cvtsi64_si128(o));
+    const __m256i sqbit4 = _mm256_broadcastq_epi64(_mm_cvtsi64_si128(sqbit));
+    const __m256i minus4 = _mm256_broadcastq_epi64(_mm_cvtsi64_si128(-1ULL));
+    __m256i mask4 = _mm256_set_epi64x(0x7e7e7e7e7e7e7e7eULL, 0x7e7e7e7e7e7e7e7eULL, 0xffffffffffffffffULL, 0x7e7e7e7e7e7e7e7eULL);
+    __m256i d4 = _mm256_set_epi64x(0x00000000000000feULL, 0x8040201008040200ULL, 0x0101010101010100ULL, 0x0002040810204080ULL);
+    d4 = _mm256_slli_epi64(d4, tzcnt(sqbit));
+    __m256i mo4 = _mm256_and_si256(o4, mask4);
+    __m256i t4 = _mm256_sub_epi64(_mm256_or_si256(mo4, _mm256_xor_si256(d4, minus4)), minus4);
+    t4 = _mm256_and_si256(_mm256_and_si256(t4, d4), p4);
+    __m256i flip4 = _mm256_and_si256(_mm256_add_epi64(t4, _mm256_xor_si256(_mm256_cmpeq_epi64(t4, _mm256_setzero_si256()), minus4)), d4);
+
+    __m256i shift4 = {1, 8, 9, 7};
+    mask4 = _mm256_set_epi64x(0x7e7e7e7e7e7e7e7eULL, 0x00ffffffffffff00ULL, 0x007e7e7e7e7e7e00ULL, 0x007e7e7e7e7e7e00ULL);
+    t4 = _mm256_load_si256(&sqbit4);
+    t4 = _mm256_or_si256(t4, _mm256_and_si256(_mm256_srlv_epi64(t4, shift4), mo4));
+    mo4 = _mm256_and_si256(mo4, _mm256_srlv_epi64(mo4, shift4));
+    shift4 = _mm256_slli_epi64(shift4, 1);
+    t4 = _mm256_or_si256(t4, _mm256_and_si256(_mm256_srlv_epi64(t4, shift4), mo4));
+    mo4 = _mm256_and_si256(mo4, _mm256_srlv_epi64(mo4, shift4));
+    shift4 = _mm256_slli_epi64(shift4, 1);
+    t4 = _mm256_or_si256(t4, _mm256_and_si256(_mm256_srlv_epi64(t4, shift4), mo4));
+    shift4 = _mm256_srli_epi64(shift4, 2);
+    t4 = _mm256_srlv_epi64(t4, shift4);
+
+    flip4 = _mm256_or_si256(_mm256_and_si256(t4, _mm256_sllv_epi64(_mm256_sub_epi64(_mm256_setzero_si256(), _mm256_and_si256(t4, p4)), shift4)), flip4);
+
+    __m128i flip2 = _mm_or_si128(_mm256_extracti128_si256(flip4, 0), _mm256_extracti128_si256(flip4, 1));
+    return _mm_extract_epi64(flip2, 0) | _mm_extract_epi64(flip2, 1);
+#elif
     Bitboard flip = 0ULL;
     Bitboard mo = o & 0x7e7e7e7e7e7e7e7eULL;
 
@@ -301,6 +365,7 @@ inline Bitboard getFlip(Bitboard p, Bitboard o, Bitboard sqbit) {
     flip |= t & (-(t & p) << 7);
 
     return flip;
+#endif
 }
 
 inline int getMobility(Bitboard p, Bitboard o) {

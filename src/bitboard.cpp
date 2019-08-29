@@ -93,6 +93,7 @@ void printBitboard(const Bitboard x) {
         else
             std::cout << std::endl;
     }
+    std::cout << std::endl;
 }
 
 static inline Bitboard getHorizontalFlip(Bitboard ep, Bitboard eo, Bitboard sqbit) {
