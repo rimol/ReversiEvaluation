@@ -934,7 +934,7 @@ void test() {
     // getMoves, getFlip
 
     // テスト回数
-    constexpr int N = 1000;
+    constexpr int N = 10000000;
 
     std::random_device rnd;
     std::mt19937_64 mt64(rnd());
@@ -952,9 +952,9 @@ void test() {
         rotateAndFlipBB(b, rotatedBlack);
         rotateAndFlipBB(w, rotatedWhite);
 
-        for (int i = 0; i < 8; ++i) {
-            printEachSquare(rotatedBlack[i], rotatedWhite[i]);
-        }
+        // for (int i = 0; i < 8; ++i) {
+        //     printEachSquare(rotatedBlack[i], rotatedWhite[i]);
+        // }
 
         // for (int j = 0; j < GroupNum; ++j) {
         //     std::cout << j << ": " << toBase3Str(extract(b, w, j)) << std::endl;
@@ -1012,7 +1012,9 @@ void test() {
 // ランダムAI VS engineの自動対戦
 void play(int N, int depth, const std::string &weightFolderpath) {
     RandomEngine randomEngine;
-    NegaScoutEngine negaScoutEngine(weightFolderpath);
+
+    PatternEvaluator evaluator(weightFolderpath);
+    NegaScoutEngine negaScoutEngine(evaluator);
 
     int wins = 0;
 
@@ -1054,8 +1056,10 @@ void play(int N, int depth, const std::string &weightFolderpath) {
 }
 
 void runSelfPlay(int n, const std::string &weightFolderpath1, const std::string &weightFolderpath2) {
-    NegaScoutEngine engine1(weightFolderpath1);
-    NegaScoutEngine engine2(weightFolderpath2);
+    PatternEvaluator evaluator1(weightFolderpath1);
+    PatternEvaluator evaluator2(weightFolderpath2);
+    NegaScoutEngine engine1(evaluator1);
+    NegaScoutEngine engine2(evaluator2);
     RandomEngine randomEngine;
 
     std::random_device rnd;

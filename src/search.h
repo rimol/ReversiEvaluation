@@ -31,6 +31,25 @@ struct CandidateMove {
     }
 };
 
+struct PositionKey {
+    Bitboard p, o;
+
+    inline bool operator==(const PositionKey &right) const {
+        return p == right.p && o == right.o;
+    }
+
+    inline bool operator!=(const PositionKey &right) const {
+        return !(*this == right);
+    }
+
+    struct PositionHash {
+        inline std::size_t operator()(const PositionKey &key) const {
+            constexpr size_t Mask = 0x7ffff;
+            return (((key.p >> 32) * 2 + key.p * 3 + (key.o >> 32) * 5 + key.o * 7) >> 7) & Mask;
+        }
+    };
+};
+
 constexpr int TTSize = 0x80000;
 
 // とりあえず適当に

@@ -17,7 +17,7 @@ int RandomEngine::chooseMove(Bitboard p, Bitboard o, int depth) {
     return tzcnt(moves);
 }
 
-AlphaBetaEngine::AlphaBetaEngine(const std::string &weightFolderpath) : evaluator(weightFolderpath) {}
+AlphaBetaEngine::AlphaBetaEngine(const Evaluator &evaluator) : evaluator(evaluator) {}
 
 double AlphaBetaEngine::negaAlpha(Bitboard p, Bitboard o, double alpha, double beta, bool passed, int depth) {
     Bitboard moves = getMoves(p, o);
@@ -80,7 +80,7 @@ int AlphaBetaEngine::chooseMove(Bitboard p, Bitboard o, int depth) {
     return sq;
 }
 
-NegaScoutEngine::NegaScoutEngine(const std::string &weightFolderpath) : AlphaBetaEngine(weightFolderpath) {}
+NegaScoutEngine::NegaScoutEngine(const Evaluator &evaluator) : AlphaBetaEngine(evaluator) {}
 
 double NegaScoutEngine::negaScout(Bitboard p, Bitboard o, double alpha, double beta, bool passed, int depth) {
     if (depth <= 3)

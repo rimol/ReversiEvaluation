@@ -34,7 +34,8 @@ void doReversi() {
     std::cout << "Enter a folder path that includes eval files:";
     std::cin >> evalValuesFolderPath;
 
-    NegaScoutEngine engine(evalValuesFolderPath);
+    PatternEvaluator evaluator(evalValuesFolderPath);
+    NegaScoutEngine engine(evaluator);
 
     while (!reversi.isFinished) {
         reversi.print();
@@ -133,14 +134,16 @@ void doAutoPlay() {
 }
 
 void doDatabaseConversion() {
-    std::string databaseFolderPath, outputFolderPath;
+    std::string databaseFolderPath, outputFolderPath, weightFolderpath;
 
+    std::cout << "weight folder path:";
+    std::cin >> weightFolderpath;
     std::cout << "Enter a folder path that includes database files:";
     std::cin >> databaseFolderPath;
     std::cout << "Enter an output folder path:";
     std::cin >> outputFolderPath;
 
-    convertDatabaseToRecord(databaseFolderPath, outputFolderPath);
+    convertDatabaseToRecord(weightFolderpath, databaseFolderPath, outputFolderPath);
 }
 
 void doRecordMerge() {
@@ -205,6 +208,7 @@ void doComp() {
 
 int main() {
     initToBase3();
+    // test();
     while (true) {
         std::cout << "Enter a command:";
         std::string command;

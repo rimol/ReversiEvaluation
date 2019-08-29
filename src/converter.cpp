@@ -9,12 +9,12 @@
 #include <regex>
 
 // 棋譜訂正の深さ
-constexpr int ExactDepth = 16;
+constexpr int ExactDepth = 18;
 
 // 失敗したらfalse
 // 棋譜訂正と、movesがおかしくないかもチェックする。
 // ofsはbinaryモードで開いている前提
-bool writeRecordsToFile(const std::vector<int> &moves, std::ofstream (&ofs)[60]) {
+bool writeRecordsToFile(const std::vector<int> &moves, std::ofstream (&ofs)[60], Solver &solver) {
     Reversi reversi;
     std::vector<Reversi> pos;
     for (int m : moves) {
@@ -35,7 +35,7 @@ bool writeRecordsToFile(const std::vector<int> &moves, std::ofstream (&ofs)[60])
     if (reversi.isFinished) {
         result = popcount(reversi.p) - popcount(reversi.o);
     } else {
-        Solution solution = solve(reversi.p, reversi.o);
+        Solution solution = solver.solve(reversi.p, reversi.o);
         result = solution.bestScore;
 
         for (int m : solution.bestMoves) {
@@ -60,7 +60,7 @@ bool writeRecordsToFile(const std::vector<int> &moves, std::ofstream (&ofs)[60])
 }
 
 // 返り値は変換した棋譜の数
-int convertThorToRecords(const std::string &filepath, std::ofstream (&ofs)[60]) {
+int convertThorToRecords(const std::string &filepath, std::ofstream (&ofs)[60], Solver &solver) {
     std::ifstream ifs(filepath, std::ios::ate | std::ios::binary);
     if (!ifs.is_open()) {
         std::cout << "'" << filepath << "'"
@@ -102,7 +102,7 @@ int convertThorToRecords(const std::string &filepath, std::ofstream (&ofs)[60]) 
             moves.push_back(sq);
         }
 
-        bool success = writeRecordsToFile(moves, ofs);
+        bool success = writeRecordsToFile(moves, ofs, solver);
         if (!success)
             ++error;
     }
@@ -250,7 +250,7 @@ bool extractNextGameResult(std::ifstream &ifs, std::string &out) {
 }
 
 // 返り値は変換した棋譜の数
-int convertGGFToRecords(const std::string &filepath, std::ofstream (&ofs)[60]) {
+int convertGGFToRecords(const std::string &filepath, std::ofstream (&ofs)[60], Solver &solver) {
     std::ifstream ifs(filepath);
 
     if (!ifs.is_open()) {
@@ -266,7 +266,7 @@ int convertGGFToRecords(const std::string &filepath, std::ofstream (&ofs)[60]) {
         moves.clear();
         bool success = parseGGFGameResultString(gameResultString, moves);
         if (success) {
-            writeRecordsToFile(moves, ofs);
+            writeRecordsToFile(moves, ofs, solver);
             ++num;
         }
     }
@@ -279,7 +279,7 @@ std::string getExtension(const std::string &filepath) {
     return filepath.substr(begin, filepath.size() - begin);
 }
 
-void convertDatabaseToRecord(const std::string &folderpath, const std::string &outputFolderpath) {
+void convertDatabaseToRecord(const std::string &weightFolderpath, const std::string &folderpath, const std::string &outputFolderpath) {
     std::ofstream ofs[60];
     for (int i = 1; i <= 60; ++i) {
         ofs[i - 1] = std::ofstream(addFileNameAtEnd(outputFolderpath, std::to_string(i), "bin"), std::ios::binary);
@@ -290,13 +290,16 @@ void convertDatabaseToRecord(const std::string &folderpath, const std::string &o
 
     int num = 0;
 
+    PatternEvaluator evaluator(weightFolderpath);
+    Solver solver(evaluator);
+
     for (auto &path : filepaths) {
         std::string extension = getExtension(path);
 
         if (extension == ".wtb") {
-            num += convertThorToRecords(path, ofs);
+            num += convertThorToRecords(path, ofs, solver);
         } else if (extension == ".ggf") {
-            num += convertGGFToRecords(path, ofs);
+            num += convertGGFToRecords(path, ofs, solver);
         }
     }
 

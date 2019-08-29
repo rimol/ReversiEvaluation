@@ -27,8 +27,11 @@ void generateRecords(int n, int randomDepth, int searchDepth, int exactDepth, co
     // バイナリではなくテキストで書き込む.
     std::ofstream ofs(addFileNameAtEnd(saveFolderpath, ss.str(), "txt"));
 
+    PatternEvaluator evaluator(weightFolderpath);
+
     RandomEngine randomEngine;
-    NegaScoutEngine negaScoutEngine(weightFolderpath);
+    NegaScoutEngine negaScoutEngine(evaluator);
+    Solver solver(evaluator);
 
     for (int i = 0; i < n; ++i) {
         Reversi reversi;
@@ -49,7 +52,7 @@ void generateRecords(int n, int randomDepth, int searchDepth, int exactDepth, co
         }
 
         if (!reversi.isFinished) {
-            auto solution = solve(reversi.p, reversi.o);
+            auto solution = solver.solve(reversi.p, reversi.o);
             for (auto sq : solution.bestMoves) {
                 ofs << convertToLegibleSQ(sq);
             }
