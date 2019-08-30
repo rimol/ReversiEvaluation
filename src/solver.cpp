@@ -4,6 +4,7 @@
 #include "search.h"
 #include <algorithm>
 #include <chrono>
+#include <cstring>
 #include <string>
 #include <vector>
 

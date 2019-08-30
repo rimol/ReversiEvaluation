@@ -1,6 +1,7 @@
 #include "pattern.h"
 #include "record.h"
 #include <string>
+#include <vector>
 
 class EvalGen {
     int numStages;

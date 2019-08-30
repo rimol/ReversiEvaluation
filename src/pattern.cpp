@@ -1,4 +1,5 @@
 #include "pattern.h"
+#include <algorithm>
 #include <vector>
 
 int ToBase3[1 << MaxDigit];

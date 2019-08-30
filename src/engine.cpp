@@ -1,6 +1,7 @@
 #include "engine.h"
 #include "eval.h"
 #include "search.h"
+#include <algorithm>
 #include <cassert>
 
 RandomEngine::RandomEngine() : mt(std::random_device()()) {}
