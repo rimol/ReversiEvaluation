@@ -1,5 +1,5 @@
 #include "pattern.h"
-#include "record.h"
+#include "trainpos.h"
 #include <string>
 
 class EvalGen {
@@ -19,13 +19,13 @@ class EvalGen {
     FeatureValue **featureValues;
 
     void clearFeatureValues();
-    inline double evalLoss(const RecordEx &recordEx);
+    inline double evalLoss(const TrainingPositionEx &trainingPosEx);
     inline void applyUpdatesOfEvalValues();
     // 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
-    double calculateEvaluationValue(const std::vector<std::string> &recordFilepaths);
+    double calculateEvaluationValue(const std::vector<std::string> &trainingDataFilepaths);
 
 public:
-    void run(const std::string &recordsFolderPath, const std::string &outputFolderPath, int first, int last);
+    void run(const std::string &trainingDataFolderPath, const std::string &outputFolderPath, int first, int last);
 
     EvalGen(int numStages, const std::string &patternName);
     ~EvalGen();

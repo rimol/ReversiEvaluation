@@ -94,14 +94,14 @@ void doRecGen() {
 }
 
 void doEvalGen() {
-    std::string patternName, recordsFolderPath, outputFolderPath;
+    std::string patternName, trainingDataFolderPath, outputFolderPath;
     int numStages, first, last;
     std::cout << "Pattern name:";
     std::cin >> patternName;
     std::cout << "The number of stages:";
     std::cin >> numStages;
-    std::cout << "Enter a folder path where records are stored:";
-    std::cin >> recordsFolderPath;
+    std::cout << "Training Data Folder Path:";
+    std::cin >> trainingDataFolderPath;
     std::cout << "Enter a folder path where you want to save the data:";
     std::cin >> outputFolderPath;
     std::cout << "first: ";
@@ -113,7 +113,7 @@ void doEvalGen() {
 
     if (first <= last) {
         EvalGen evalGen(numStages, patternName);
-        evalGen.run(recordsFolderPath, outputFolderPath, first, last);
+        evalGen.run(trainingDataFolderPath, outputFolderPath, first, last);
     }
 
     std::cout << "Done!" << std::endl;
@@ -134,25 +134,23 @@ void doAutoPlay() {
 }
 
 void doDatabaseConversion() {
-    std::string databaseFolderPath, outputFolderPath, weightFolderpath;
+    std::string databaseFolderPath, outputFolderPath;
 
-    std::cout << "weight folder path:";
-    std::cin >> weightFolderpath;
     std::cout << "Enter a folder path that includes database files:";
     std::cin >> databaseFolderPath;
     std::cout << "Enter an output folder path:";
     std::cin >> outputFolderPath;
 
-    convertDatabaseToRecord(weightFolderpath, databaseFolderPath, outputFolderPath);
+    convertDatabaseToRecords(databaseFolderPath, outputFolderPath);
 }
 
-void doRecordMerge() {
+void doTrainingDataMerge() {
     std::vector<std::string> inputFolderpaths;
     std::string outputFolderpath;
 
     while (true) {
         std::string folderpath;
-        std::cout << "Enter a folder path where records are stored. when you finish entering folder paths, enter 0:";
+        std::cout << "Enter a folder path where training data is stored. when you finish entering folder paths, enter 0:";
         std::cin >> folderpath;
 
         if (folderpath == "0")
@@ -164,34 +162,34 @@ void doRecordMerge() {
     std::cout << "Enter a folder path where you want to save results:";
     std::cin >> outputFolderpath;
 
-    mergeRecordFiles(inputFolderpaths, outputFolderpath);
+    mergeTrainingDataFiles(inputFolderpaths, outputFolderpath);
 
     std::cout << "Done!" << std::endl;
 }
 
-void doRecFix() {
-    std::string inputFolderpath, outputFolderpath;
-    std::cout << "Enter a folder path where old-type records are stored:";
-    std::cin >> inputFolderpath;
-    std::cout << "Enter a folder path where you want to save data:";
-    std::cin >> outputFolderpath;
+// void doRecFix() {
+//     std::string inputFolderpath, outputFolderpath;
+//     std::cout << "Enter a folder path where old-type records are stored:";
+//     std::cin >> inputFolderpath;
+//     std::cout << "Enter a folder path where you want to save data:";
+//     std::cin >> outputFolderpath;
 
-    fixRecords(inputFolderpath, outputFolderpath);
+//     fixRecords(inputFolderpath, outputFolderpath);
+//     std::cout << "Done!" << std::endl;
+// }
+
+void doTrainingDataGen() {
+    std::string recordFolderpath, saveFolderpath;
+    std::cout << "A folder path to .txt records:";
+    std::cin >> recordFolderpath;
+    std::cout << "Save Folder:";
+    std::cin >> saveFolderpath;
+
+    generateTrainingData(recordFolderpath, saveFolderpath);
     std::cout << "Done!" << std::endl;
 }
 
-void doToRec() {
-    std::string inputFilepath, outputFolderpath;
-    std::cout << "Record file: ";
-    std::cin >> inputFilepath;
-    std::cout << "Enter a folder path where you want to save data:";
-    std::cin >> outputFolderpath;
-
-    convertRecgenProducts(inputFilepath, outputFolderpath);
-    std::cout << "Done!" << std::endl;
-}
-
-void doComp() {
+void doEvalComp() {
     int n;
     std::string weightFolderpath1, weightFolderpath2;
 
@@ -204,6 +202,24 @@ void doComp() {
 
     runSelfPlay(n, weightFolderpath1, weightFolderpath2);
     std::cout << "Done!" << std::endl;
+}
+
+void doCorrectRecords() {
+    int exactDepth;
+    std::string recordFolderpath, saveFolderpath, weightFolderpath;
+    std::cout << "A folder path to .txt records:";
+    std::cin >> recordFolderpath;
+    std::cout << "Save Folder:";
+    std::cin >> saveFolderpath;
+    std::cout << "Exact Depth:";
+    std::cin >> exactDepth;
+    std::cout << "weight foler path(used by solver):";
+    std::cin >> weightFolderpath;
+
+    PatternEvaluator evaluator(weightFolderpath);
+    Solver solver(evaluator);
+
+    correctRecords(recordFolderpath, saveFolderpath, exactDepth, solver);
 }
 
 int main() {
@@ -227,13 +243,15 @@ int main() {
         else if (command == "conv")
             doDatabaseConversion();
         else if (command == "evalcomp")
-            doComp();
-        else if (command == "mergerec")
-            doRecordMerge();
-        else if (command == "fixrec")
-            doRecFix();
-        else if (command == "torec")
-            doToRec();
+            doEvalComp();
+        else if (command == "mergetrain")
+            doTrainingDataMerge();
+        else if (command == "corec")
+            doCorrectRecords();
+        // else if (command == "fixrec")
+        //     doRecFix();
+        else if (command == "traingen")
+            doTrainingDataGen();
         else if (command == "exit")
             break;
     }
