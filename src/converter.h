@@ -10,7 +10,7 @@
 void convertDatabaseToRecords(const std::string &folderpath, const std::string &outputFolderpath);
 // 教師データのフォーマットに変換 saveFolderpathに1.bin...みたいなのが生成される
 void generateTrainingData(const std::string &recordFolderpath, const std::string &saveFolderpath);
-// 棋譜訂正
+// 完全読みによる訂正に加えて、途中で終局してる残念棋譜の削除、正しい手を打ってない棋譜の削除、連続した同じ棋譜を1つにする処理をする
 void correctRecords(const std::string &recordFolderpath, const std::string &saveFolderpath, int exactDepth, Solver &solver);
 // outputのフォルダ内のi.binはまずクリアされるので注意
 void mergeTrainingDataFiles(const std::vector<std::string> &inputFolderpaths, const std::string &outputFolderpath);

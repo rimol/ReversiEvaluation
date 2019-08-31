@@ -146,7 +146,8 @@ bool getNextContents(const std::vector<std::string> &tagNames, StringWithCursor 
 }
 
 int toNumericSQ(char colAlphabet, char rowNumber) {
-    return (7 - (colAlphabet - 'a')) + (7 - (rowNumber - '1')) * 8;
+    char base = 'a' <= colAlphabet && colAlphabet <= 'h' ? 'a' : 'A';
+    return (7 - (colAlphabet - base)) + (7 - (rowNumber - '1')) * 8;
 }
 
 int toNumericSQ(const std::string &moveString) {
@@ -162,7 +163,7 @@ bool isValidMoveString(const std::string &moveString) {
     char colAlphabet = moveString[0];
     char rowNumber = moveString[1];
 
-    return ('1' <= rowNumber && rowNumber <= '8') && ('a' <= colAlphabet && colAlphabet <= 'h');
+    return ('1' <= rowNumber && rowNumber <= '8') && (('a' <= colAlphabet && colAlphabet <= 'h') || ('A' <= colAlphabet && colAlphabet <= 'H'));
 }
 
 // 初期盤面がちがうものときfalseを返す。
@@ -356,18 +357,25 @@ void correctRecords(const std::string &recordFolderpath, const std::string &save
         if (getExtension(filepath) != ".txt")
             continue;
 
+        int n = 0;
+        std::string prevRecordStr = "";
         std::string recordStr;
         std::ifstream ifs(filepath);
         std::ofstream ofs(addFileNameAtEnd(saveFolderpath, getFilenameNoExtension(filepath) + "exact" + std::to_string(exactDepth), "txt"));
         while (getline(ifs, recordStr)) {
+            if (recordStr == prevRecordStr)
+                continue;
+
+            prevRecordStr = recordStr;
+
             Reversi reversi;
             bool success = true;
             std::stringstream ss;
-            for (int i = 0; (reversi.stoneCount() + exactDepth) < 64 && i < recordStr.size() - 1; i += 2) {
-                if (reversi.move(toNumericSQ(recordStr[i], recordStr[i + 1]))) {
+            for (int i = 0; !reversi.isFinished && (reversi.stoneCount() + exactDepth) < 64; i += 2) {
+                if (i < recordStr.size() - 1 && reversi.move(toNumericSQ(recordStr[i], recordStr[i + 1]))) {
                     ss << recordStr[i] << recordStr[i + 1];
                 } else {
-                    std::cerr << "Can't convert: " << recordStr << std::endl;
+                    // std::cerr << "Can't convert: " << recordStr << std::endl;
                     success = false;
                     break;
                 }
@@ -375,19 +383,22 @@ void correctRecords(const std::string &recordFolderpath, const std::string &save
 
             if (success) {
                 ofs << ss.str();
-                auto solution = solver.solve(reversi.p, reversi.o);
-                for (int sq : solution.bestMoves) {
-                    ofs << convertToLegibleSQ(sq);
+                if (!reversi.isFinished) {
+                    auto solution = solver.solve(reversi.p, reversi.o);
+                    for (int sq : solution.bestMoves) {
+                        ofs << convertToLegibleSQ(sq);
+                    }
                 }
                 ofs << std::endl;
-                ++numCorrected;
-            }
-
-            if (numCorrected % 100 == 0) {
-                std::cout << numCorrected << "games were corrected." << std::endl;
+                ++n;
             }
         }
+
+        numCorrected += n;
+        std::cout << n << " games in" << filepath << " were corrected." << std::endl;
     }
+
+    std::cout << "Done! " << numCorrected << " games were successfully corrected!" << std::endl;
 }
 
 void mergeTrainingDataFiles(const std::vector<std::string> &inputFolderpaths, const std::string &outputFolderpath) {
