@@ -1,19 +1,15 @@
-#include <time.h>
 #include "util.h"
+#include <time.h>
 
 #ifdef _WIN32
 #include <direct.h>
-constexpr char PathDivider = '\\';
-
 bool makeFolder(std::string folderPath) {
     return _mkdir(folderPath.c_str()) == 0;
 }
 #elif __APPLE__
+#include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <dirent.h>
-constexpr char PathDivider = '/';
-
 bool makeFolder(std::string folderPath) {
     return mkdir(folderPath.c_str(), 0777) == 0;
 }
@@ -38,25 +34,26 @@ std::string addFileNameAtEnd(std::string folderPath, std::string fileNameNoExten
 /*
     名前が'.', '..'のファイルがなぜか混じります気をつけて
  */
-void enumerateFilesIn(std::string folderPath, std::vector<std::string>& out) {
-    #ifdef _WIN32
-    // 実装してください
-    #elif __APPLE__
+void enumerateFilesIn(std::string folderPath, std::vector<std::string> &out) {
+#ifdef _WIN32
+// 実装してください
+#elif __APPLE__
     if (folderPath.back() != PathDivider) {
         folderPath += PathDivider;
     }
 
     auto dir = opendir(folderPath.c_str());
-    if (dir == NULL) return;
+    if (dir == NULL)
+        return;
 
-    dirent* dent;
+    dirent *dent;
     do {
         dent = readdir(dir);
         if (dent != NULL) {
             out.push_back(folderPath + dent->d_name);
         }
-    } while(dent != NULL);
+    } while (dent != NULL);
 
     closedir(dir);
-    #endif
+#endif
 }

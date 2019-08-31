@@ -1,7 +1,7 @@
 #include "evalgen.h"
 #include "bitboard.h"
 #include "eval.h"
-#include "record.h"
+#include "trainpos.h"
 #include "util.h"
 #include <algorithm>
 #include <cmath>
@@ -18,13 +18,13 @@
         }                                              \
     }
 
-#define FOREACH_FEATURE_IN(_recordEx, Statement)                                  \
-    for (int i = 0; i < usedPattern.numPattern(); ++i) {                          \
-        int _g = usedPattern.group(i);                                            \
-        Bitboard _p = (_recordEx).playerRotatedBB[usedPattern.rotationType(i)];   \
-        Bitboard _o = (_recordEx).opponentRotatedBB[usedPattern.rotationType(i)]; \
-        auto &fv = featureValues[_g][usedPattern.extract(_p, _o, _g)];            \
-        Statement                                                                 \
+#define FOREACH_FEATURE_IN(_trainingPosEx, Statement)                         \
+    for (int i = 0; i < usedPattern.numPattern(); ++i) {                      \
+        int _g = usedPattern.group(i);                                        \
+        Bitboard _p = (_trainingPosEx).rotatedP[usedPattern.rotationType(i)]; \
+        Bitboard _o = (_trainingPosEx).rotatedO[usedPattern.rotationType(i)]; \
+        auto &fv = featureValues[_g][usedPattern.extract(_p, _o, _g)];        \
+        Statement                                                             \
     }
 
 EvalGen::EvalGen(int numStages, const std::string &patternName) : numStages(numStages), patternName(patternName), usedPattern(Patterns.at(patternName)) {
@@ -54,10 +54,10 @@ void EvalGen::clearFeatureValues() {
 }
 
 // y - e
-inline double EvalGen::evalLoss(const RecordEx &recordEx) {
+inline double EvalGen::evalLoss(const TrainingPositionEx &trainingPosEx) {
     double e = 0.0;
-    FOREACH_FEATURE_IN(recordEx, { e += fv.weight; })
-    return (double)recordEx.result - e;
+    FOREACH_FEATURE_IN(trainingPosEx, { e += fv.weight; })
+    return (double)trainingPosEx.result - e;
 }
 
 inline void EvalGen::applyUpdatesOfEvalValues() {
@@ -67,34 +67,34 @@ inline void EvalGen::applyUpdatesOfEvalValues() {
 }
 
 // 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
-double EvalGen::calculateEvaluationValue(const std::vector<std::string> &recordFilepaths) {
+double EvalGen::calculateEvaluationValue(const std::vector<std::string> &trainingDataFilepaths) {
     clearFeatureValues();
 
-    int numUsedRecords = 0;
+    int numUsedPositions = 0;
 
     // ファイルを何回も読むのは無駄なので最初に全部読み込む
-    std::vector<RecordEx> records;
-    for (auto &filepath : recordFilepaths) {
+    std::vector<TrainingPositionEx> trainingPositions;
+    for (auto &filepath : trainingDataFilepaths) {
         std::ifstream ifs(filepath, std::ios::ate | std::ios::binary);
         if (!ifs.is_open()) {
             std::cout << "Can't open a file: " << filepath << std::endl;
         } else {
-            int numRecordInThisFile = ifs.tellg() / sizeof(Record);
-            numUsedRecords += numRecordInThisFile;
+            int numPositionsInThisFile = ifs.tellg() / sizeof(TrainingPosition);
+            numUsedPositions += numPositionsInThisFile;
             ifs.seekg(0);
 
-            for (int i = 0; i < numRecordInThisFile; ++i) {
-                Record record;
-                ifs.read((char *)&record, sizeof(Record));
-                assert((record.p & record.o) == 0ULL);
-                records.emplace_back(record);
+            for (int i = 0; i < numPositionsInThisFile; ++i) {
+                TrainingPosition pos;
+                ifs.read((char *)&pos, sizeof(TrainingPosition));
+                assert((pos.p & pos.o) == 0ULL);
+                trainingPositions.emplace_back(pos);
             }
         }
     }
 
     // 予め各特徴のステップサイズを計算しておく。
-    for (const auto &recordEx : records) {
-        FOREACH_FEATURE_IN(recordEx, { ++fv.stepSize; })
+    for (const auto &trainingPosEx : trainingPositions) {
+        FOREACH_FEATURE_IN(trainingPosEx, { ++fv.stepSize; })
     }
 
     FOREACH_FEATURE_VALUE(
@@ -106,21 +106,21 @@ double EvalGen::calculateEvaluationValue(const std::vector<std::string> &recordF
     while (true) {
         // 偏差の2乗の和
         double squaredLossSum = 0;
-        for (const auto &recordEx : records) {
+        for (const auto &trainingPosEx : trainingPositions) {
             // 残差
-            double loss = evalLoss(recordEx);
-            squaredLossSum += loss * loss;
+            double loss = evalLoss(trainingPosEx);
+            squaredLossSum += loss * loss; // Los!
             // このデータで出現する各特徴に対し更新分を加算していく
-            FOREACH_FEATURE_IN(recordEx, { fv.update += loss; })
+            FOREACH_FEATURE_IN(trainingPosEx, { fv.update += loss; })
         }
 
-        double currentVariance = squaredLossSum / (double)numUsedRecords;
+        double currentVariance = squaredLossSum / (double)numUsedPositions;
 
         // 終了条件わからん
         // 「前回との差がピッタリ0」を条件にすると終わらない
         // -> １局面あたりの変化（の二乗）がXを下回ったら終了する
         constexpr double X = 10e-4;
-        if (std::abs(squaredLossSum - prevSquaredLossSum) / (double)numUsedRecords < X) {
+        if (std::abs(squaredLossSum - prevSquaredLossSum) / (double)numUsedPositions < X) {
             std::cout << "Done. variance: " << currentVariance << ", loop: " << loopCounter << " times" << std::endl;
             return currentVariance;
         }
@@ -135,7 +135,7 @@ double EvalGen::calculateEvaluationValue(const std::vector<std::string> &recordF
     }
 }
 
-void EvalGen::run(const std::string &recordsFolderPath, const std::string &outputFolderPath, int first, int last) {
+void EvalGen::run(const std::string &trainingDataFolderPath, const std::string &outputFolderPath, int first, int last) {
     if (first <= last && 1 <= first && last <= numStages) {
         std::string saveFolderPath = createCurrentTimeFolderIn(outputFolderPath);
         // info.txt
@@ -148,7 +148,7 @@ void EvalGen::run(const std::string &recordsFolderPath, const std::string &outpu
         for (int i = first; i <= last; ++i) {
             std::vector<std::string> folderpaths;
             for (int j = 0; j < stageInterval; ++j) {
-                folderpaths.push_back(addFileNameAtEnd(recordsFolderPath, std::to_string(i * 4 - j), "bin"));
+                folderpaths.push_back(addFileNameAtEnd(trainingDataFolderPath, std::to_string(i * 4 - j), "bin"));
             }
 
             // ファイルパスを渡して計算させる
