@@ -2,6 +2,10 @@
 #include <string>
 #include <vector>
 
+// .のあとを返す
+std::string getExtension(const std::string &filepath);
+std::string getFilenameNoExtension(const std::string &filepath);
+
 #ifdef _WIN32
 constexpr char PathDivider = '\\';
 #elif __APPLE__

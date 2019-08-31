@@ -1,7 +1,19 @@
 #include "util.h"
 #include <time.h>
 
+std::string getExtension(const std::string &filepath) {
+    int begin = filepath.find_last_of('.') + 1;
+    return filepath.substr(begin, filepath.size() - begin);
+}
+
+std::string getFilenameNoExtension(const std::string &filepath) {
+    auto begin = filepath.find_last_of(PathDivider) + 1;
+    auto end = filepath.find_last_of('.');
+    return filepath.substr(begin, end - begin);
+}
+
 #ifdef _WIN32
+#include <windows.h>
 #include <direct.h>
 bool makeFolder(std::string folderPath) {
     return _mkdir(folderPath.c_str()) == 0;
@@ -35,13 +47,21 @@ std::string addFileNameAtEnd(std::string folderPath, std::string fileNameNoExten
     名前が'.', '..'のファイルがなぜか混じります気をつけて
  */
 void enumerateFilesIn(std::string folderPath, std::vector<std::string> &out) {
-#ifdef _WIN32
-// 実装してください
-#elif __APPLE__
     if (folderPath.back() != PathDivider) {
         folderPath += PathDivider;
     }
-
+#ifdef _WIN32
+    WIN32_FIND_DATA win32fd;
+    HANDLE hFind = FindFirstFile((folderPath + "*.*").c_str(), &win32fd);
+    if (hFind == INVALID_HANDLE_VALUE) return;
+    do {
+        if (win32fd.dwFileAttributes & ~FILE_ATTRIBUTE_DIRECTORY) {
+            std::string filename = (const char*)win32fd.cFileName;
+            out.push_back(folderPath + filename);
+        }
+	} while (FindNextFile(hFind, &win32fd));
+    FindClose(hFind);
+#elif __APPLE__
     auto dir = opendir(folderPath.c_str());
     if (dir == NULL)
         return;
