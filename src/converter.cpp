@@ -7,12 +7,7 @@
 #include <cctype>
 #include <fstream>
 #include <regex>
-
-std::string getFilenameNoExtension(const std::string &filepath) {
-    auto begin = filepath.find_last_of(PathDivider) + 1;
-    auto end = filepath.find_last_of('.');
-    return filepath.substr(begin, end - begin);
-}
+#include <set>
 
 struct Thor {
     // ゴミ
@@ -260,11 +255,6 @@ int convertGGFToRecords(const std::string &filepath, const std::string &saveFold
     return numConverted;
 }
 
-std::string getExtension(const std::string &filepath) {
-    int begin = filepath.find_last_of('.');
-    return filepath.substr(begin, filepath.size() - begin);
-}
-
 void convertDatabaseToRecords(const std::string &folderpath, const std::string &outputFolderpath) {
     std::vector<std::string> filepaths;
     enumerateFilesIn(folderpath, filepaths);
@@ -275,9 +265,9 @@ void convertDatabaseToRecords(const std::string &folderpath, const std::string &
         std::string extension = getExtension(path);
 
         int n;
-        if (extension == ".wtb") {
+        if (extension == "wtb") {
             n = convertThorToRecords(path, outputFolderpath);
-        } else if (extension == ".ggf") {
+        } else if (extension == "ggf") {
             n = convertGGFToRecords(path, outputFolderpath);
         } else
             continue;
@@ -299,7 +289,7 @@ void generateTrainingData(const std::string &recordFolderpath, const std::string
     enumerateFilesIn(recordFolderpath, recordFilepaths);
 
     for (const auto &filepath : recordFilepaths) {
-        if (getExtension(filepath) != ".txt")
+        if (getExtension(filepath) != "txt")
             continue;
 
         int randomDepth = 0;
@@ -348,25 +338,50 @@ void generateTrainingData(const std::string &recordFolderpath, const std::string
     }
 }
 
+// 最初がF5になるように回転する
+void rotateRecord(std::string& recordStr) {
+    std::string firstMove = recordStr.substr(0, 2);
+    if (firstMove == "C4") {
+        for (int i = 0; i < recordStr.size() - 1; i += 2) {
+            recordStr[i] = 'H' - (recordStr[i] - 'A');
+            recordStr[i + 1] = '8' - (recordStr[i + 1] - '1');
+        }
+    }
+    else if (firstMove == "D3") {
+        for (int i = 0; i < recordStr.size() - 1; i += 2) {
+            char t = 'H' - (recordStr[i + 1] - '1');
+            recordStr[i + 1] = ('H' - recordStr[i]) + '1';
+            recordStr[i] = t;
+        }
+    }
+    else if (firstMove == "E6") {
+        for (int i = 0; i < recordStr.size() - 1; i += 2) {
+            char t = 'H' - ('8' - recordStr[i + 1]);
+            recordStr[i + 1] = '8' - ('H' - recordStr[i]);
+            recordStr[i] = t;
+        }
+    }
+    // F5または変な棋譜
+    else return;
+}
+
 void correctRecords(const std::string &recordFolderpath, const std::string &saveFolderpath, int exactDepth, Solver &solver) {
     std::vector<std::string> recordFilepaths;
     enumerateFilesIn(recordFolderpath, recordFilepaths);
 
-    int numCorrected = 0;
+    std::set<std::string> recordSet;
     for (const auto &filepath : recordFilepaths) {
-        if (getExtension(filepath) != ".txt")
+        if (getExtension(filepath) != "txt")
             continue;
 
         int n = 0;
-        std::string prevRecordStr = "";
         std::string recordStr;
         std::ifstream ifs(filepath);
         std::ofstream ofs(addFileNameAtEnd(saveFolderpath, getFilenameNoExtension(filepath) + "exact" + std::to_string(exactDepth), "txt"));
         while (getline(ifs, recordStr)) {
-            if (recordStr == prevRecordStr)
+            rotateRecord(recordStr);
+            if (recordSet.count(recordStr))
                 continue;
-
-            prevRecordStr = recordStr;
 
             Reversi reversi;
             bool success = true;
@@ -391,14 +406,14 @@ void correctRecords(const std::string &recordFolderpath, const std::string &save
                 }
                 ofs << std::endl;
                 ++n;
+                recordSet.insert(recordStr);
             }
         }
 
-        numCorrected += n;
-        std::cout << n << " games in" << filepath << " were corrected." << std::endl;
+        std::cout << n << " games in " << filepath << " were corrected." << std::endl;
     }
 
-    std::cout << "Done! " << numCorrected << " games were successfully corrected!" << std::endl;
+    std::cout << "Done! " << recordSet.size() << " games were successfully corrected!" << std::endl;
 }
 
 void mergeTrainingDataFiles(const std::vector<std::string> &inputFolderpaths, const std::string &outputFolderpath) {
