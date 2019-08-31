@@ -146,8 +146,7 @@ bool getNextContents(const std::vector<std::string> &tagNames, StringWithCursor 
 }
 
 int toNumericSQ(char colAlphabet, char rowNumber) {
-    char base = 'a' <= colAlphabet && colAlphabet <= 'h' ? 'a' : 'A';
-    return (7 - (colAlphabet - base)) + (7 - (rowNumber - '1')) * 8;
+    return (7 - (colAlphabet - 'a')) + (7 - (rowNumber - '1')) * 8;
 }
 
 int toNumericSQ(const std::string &moveString) {
@@ -163,10 +162,10 @@ bool isValidMoveString(const std::string &moveString) {
     char colAlphabet = moveString[0];
     char rowNumber = moveString[1];
 
-    return ('1' <= rowNumber && rowNumber <= '8') && (('a' <= colAlphabet && colAlphabet <= 'h') || ('A' <= colAlphabet && colAlphabet <= 'H'));
+    return ('1' <= rowNumber && rowNumber <= '8') && ('a' <= colAlphabet && colAlphabet <= 'h');
 }
 
-// 成功したらtrue
+// 初期盤面がちがうものときfalseを返す。
 bool parseGGFGameResultString(const std::string &gameResultString, std::vector<int> &moves) {
     StringWithCursor swc(gameResultString);
     std::string boardString;
@@ -178,16 +177,18 @@ bool parseGGFGameResultString(const std::string &gameResultString, std::vector<i
     if (boardString != "8 -------- -------- -------- ---O*--- ---*O--- -------- -------- -------- *")
         return false;
 
-    while (moves.size() < 60) {
-        std::string moveString;
-        // ファイルぶっ壊れてる旨のメッセージ出した方がよいです。
-        if (!getNextContents({"B", "W"}, swc, moveString))
-            return false;
-        if (!isValidMoveString(moveString))
-            return false;
+    std::string moveString;
+    while (getNextContents({"B", "W"}, swc, moveString)) {
+        std::transform(moveString.cbegin(), moveString.cend(), moveString.begin(), tolower);
 
-        int sq = toNumericSQ(moveString);
-        moves.push_back(sq);
+        if (isValidMoveString(moveString)) {
+            int sq = toNumericSQ(moveString);
+            moves.push_back(sq);
+            // PAとpassは見つけたけど他にもあるかも
+        } else if (moveString.substr(0, 2) == "pa" || moveString.substr(0, 4) == "pass") {
+            continue;
+        } else
+            break;
     }
 
     return true;
@@ -225,6 +226,7 @@ bool extractNextGameResult(std::ifstream &ifs, std::string &out) {
 }
 
 // 返り値は変換した棋譜の数
+// 対戦途中（どころか最初から）で終わってる問題児もあるが、それはcorrectRecordsで綺麗にする.
 int convertGGFToRecords(const std::string &filepath, const std::string &saveFolderpath) {
     std::ifstream ifs(filepath);
     std::string saveFilepath = addFileNameAtEnd(saveFolderpath, getFilenameNoExtension(filepath), "txt");
