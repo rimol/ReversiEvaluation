@@ -22,10 +22,11 @@ void Solver::clear() {
     std::memset(transpositionTable2, 0, sizeof(SearchedPosition<int>) * TTSize);
 }
 
-int Solver::negaAlpha(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
+int Solver::negaAlpha(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed) {
+    assert(depth > 0);
     ++nodeCount;
-
-    if (popcount(p | o) == 63) {
+    // todo: ひっくり返る石の数を表引きする
+    if (depth == 1) {
         Bitboard flip = getFlip(p, o, ~(p | o));
 
         if (flip != 0ULL) {
@@ -44,7 +45,7 @@ int Solver::negaAlpha(Bitboard p, Bitboard o, int alpha, int beta, bool passed) 
 
     // パスの処理
     if (moves == 0ULL)
-        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negaAlpha(o, p, -beta, -alpha, true));
+        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negaAlpha(o, p, -beta, -alpha, depth, true));
 
     // 打てるところがあるとき
 
@@ -52,30 +53,30 @@ int Solver::negaAlpha(Bitboard p, Bitboard o, int alpha, int beta, bool passed) 
     // 下からビットを取り出していく
     while (moves) {
         Bitboard sqbit = moves & -moves;
+        moves ^= sqbit;
         // 盤面をすすめる
         Bitboard flip = getFlip(p, o, sqbit);
         // 敵からみた石差が返ってくるため, 符号を反転させる
-        int score = -negaAlpha(o ^ flip, p ^ flip ^ sqbit, -beta, -std::max(bestScore, alpha), false); // 下限がbestScore or minになる（大きい方）. 相手から見たときの符号反転注意
+        int score = -negaAlpha(o ^ flip, p ^ flip ^ sqbit, -beta, -std::max(bestScore, alpha), depth - 1, false); // 下限がbestScore or minになる（大きい方）. 相手から見たときの符号反転注意
         // 枝刈りできます(少なくともbestScoreがmax以上になるので)
         if (score >= beta)
             return score;
         bestScore = std::max(score, bestScore);
-        moves ^= sqbit;
     }
 
     return bestScore;
 }
 
-int Solver::negaScout2(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
-    if (popcount(p | o) >= 58)
-        return negaAlpha(p, o, alpha, beta, passed);
+int Solver::negaScout2(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed) {
+    if (depth <= 6)
+        return negaAlpha(p, o, alpha, beta, depth, passed);
 
     ++nodeCount;
 
     Bitboard moves = getMoves(p, o);
     // パス
     if (moves == 0ULL)
-        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negaScout2(o, p, -beta, -alpha, true));
+        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negaScout2(o, p, -beta, -alpha, depth, true));
 
     // テーブルから前の探索結果を取り出し、vの範囲を狭めて効率化を図る.
     const int index = getIndex(p, o);
@@ -113,7 +114,7 @@ int Solver::negaScout2(Bitboard p, Bitboard o, int alpha, int beta, bool passed)
     std::sort(orderedMoves.begin(), orderedMoves.end());
 
     // ここから探索
-    int bestScore = -negaScout2(orderedMoves[0].nextP, orderedMoves[0].nextO, -beta, -alpha, false);
+    int bestScore = -negaScout2(orderedMoves[0].nextP, orderedMoves[0].nextO, -beta, -alpha, depth - 1, false);
 
     // 枝刈り
     if (bestScore >= beta) {
@@ -132,7 +133,7 @@ int Solver::negaScout2(Bitboard p, Bitboard o, int alpha, int beta, bool passed)
         // (2) a < roughScore <= v
         // のどちらかを満たす
         // Null Window Searchのこの性質が成り立つ理由がわからんけど... <- わかりましたいずれ証明をQiitaに上げます
-        int roughScore = -negaScout2(cm.nextP, cm.nextO, -(a + 1), -a, false);
+        int roughScore = -negaScout2(cm.nextP, cm.nextO, -(a + 1), -a, depth - 1, false);
 
         // roughScore >= beta > a なので (2).
         if (roughScore >= beta) {
@@ -144,7 +145,7 @@ int Solver::negaScout2(Bitboard p, Bitboard o, int alpha, int beta, bool passed)
         else if (roughScore > a) {
             // v => roughScore > a >= bestScoreであるので
             // ついでに探索窓も狭める
-            a = bestScore = -negaScout2(cm.nextP, cm.nextO, -beta, -roughScore, false);
+            a = bestScore = -negaScout2(cm.nextP, cm.nextO, -beta, -roughScore, depth - 1, false);
 
             // 枝刈りチェック
             if (bestScore >= beta) {
@@ -175,16 +176,16 @@ int Solver::negaScout2(Bitboard p, Bitboard o, int alpha, int beta, bool passed)
     }
 }
 
-int Solver::negaScout1(Bitboard p, Bitboard o, int alpha, int beta, bool passed) {
-    if (popcount(p | o) >= 48)
-        return negaScout2(p, o, alpha, beta, passed);
+int Solver::negaScout1(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed) {
+    if (depth <= 16)
+        return negaScout2(p, o, alpha, beta, depth, passed);
 
     ++nodeCount;
 
     Bitboard moves = getMoves(p, o);
     // パス
     if (moves == 0ULL)
-        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negaScout1(o, p, -beta, -alpha, true));
+        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negaScout1(o, p, -beta, -alpha, depth, true));
 
     // テーブルから前の探索結果を取り出し、vの範囲を狭めて効率化を図る.
     const PositionKey key = {p, o};
@@ -223,7 +224,7 @@ int Solver::negaScout1(Bitboard p, Bitboard o, int alpha, int beta, bool passed)
     std::sort(orderedMoves.begin(), orderedMoves.end());
 
     // ここから探索
-    int bestScore = -negaScout1(orderedMoves[0].nextP, orderedMoves[0].nextO, -beta, -alpha, false);
+    int bestScore = -negaScout1(orderedMoves[0].nextP, orderedMoves[0].nextO, -beta, -alpha, depth - 1, false);
 
     // 枝刈り
     if (bestScore >= beta) {
@@ -242,7 +243,7 @@ int Solver::negaScout1(Bitboard p, Bitboard o, int alpha, int beta, bool passed)
         // (2) a < roughScore <= v
         // のどちらかを満たす
         // Null Window Searchのこの性質が成り立つ理由がわからんけど... <- わかりましたいずれ証明をQiitaに上げます
-        int roughScore = -negaScout1(cm.nextP, cm.nextO, -(a + 1), -a, false);
+        int roughScore = -negaScout1(cm.nextP, cm.nextO, -(a + 1), -a, depth - 1, false);
 
         // roughScore >= beta > a なので (2).
         if (roughScore >= beta) {
@@ -254,7 +255,7 @@ int Solver::negaScout1(Bitboard p, Bitboard o, int alpha, int beta, bool passed)
         else if (roughScore > a) {
             // v => roughScore > a >= bestScoreであるので
             // ついでに探索窓も狭める
-            a = bestScore = -negaScout1(cm.nextP, cm.nextO, -beta, -roughScore, false);
+            a = bestScore = -negaScout1(cm.nextP, cm.nextO, -beta, -roughScore, depth - 1, false);
 
             // 枝刈りチェック
             if (bestScore >= beta) {
@@ -292,6 +293,7 @@ std::vector<int> Solver::getBestMoves(Bitboard p, Bitboard o, int bestScore) {
 
     while (!reversi.isFinished) {
         Bitboard moves = reversi.moves;
+        int depth = 64 - reversi.stoneCount();
 
         while (moves != 0ULL) {
             Bitboard sqbit = moves & -moves;
@@ -301,7 +303,7 @@ std::vector<int> Solver::getBestMoves(Bitboard p, Bitboard o, int bestScore) {
             Bitboard _o = reversi.o ^ flip;
             /* alphabetaではmin < v < maxならばvは正確な評価値であることが確定するので、以下のように探索窓を設定しても
            この手がbestScoreを導く手かどうか分かる */
-            int score = -negaScout1(_o, _p, -bestScore - 1, -bestScore + 1, false);
+            int score = -negaScout1(_o, _p, -bestScore - 1, -bestScore + 1, depth - 1, false);
             if (score == bestScore) {
                 int sq = tzcnt(sqbit);
                 bestMoves.push_back(sq);
@@ -324,7 +326,7 @@ Solution Solver::solve(Bitboard p, Bitboard o) {
     Solution solution;
 
     auto start = std::chrono::system_clock::now();
-    solution.bestScore = negaScout1(p, o, -64, 64, false);
+    solution.bestScore = negaScout1(p, o, -64, 64, 64 - popcount(p | o), false);
     auto end1 = std::chrono::system_clock::now();
     solution.nodeCount = nodeCount;
     solution.bestMoves = getBestMoves(p, o, solution.bestScore);

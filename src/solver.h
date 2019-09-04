@@ -23,11 +23,11 @@ class Solver {
 
     void clear();
     // 葉付近
-    int negaAlpha(Bitboard p, Bitboard o, int alpha, int beta, bool passed);
+    int negaAlpha(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed);
     // unordered_map製置換表をつかう
-    int negaScout1(Bitboard p, Bitboard o, int alpha, int beta, bool passed);
+    int negaScout1(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed);
     // 上書き置換表をつかう
-    int negaScout2(Bitboard p, Bitboard o, int alpha, int beta, bool passed);
+    int negaScout2(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed);
 
     std::vector<int> getBestMoves(Bitboard p, Bitboard o, int bestScore);
 
