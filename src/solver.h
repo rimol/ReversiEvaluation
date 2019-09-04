@@ -22,8 +22,10 @@ class Solver {
     const Evaluator &evaluator;
 
     void clear();
-    // 葉付近
-    int negaAlpha(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed);
+    // 4~6
+    int negaAlpha1(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed);
+    // 1~3
+    int negaAlpha2(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed);
     // unordered_map製置換表をつかう
     int negaScout1(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed);
     // 上書き置換表をつかう

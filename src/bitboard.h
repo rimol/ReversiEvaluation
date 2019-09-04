@@ -60,14 +60,18 @@ constexpr int tzcnt(Bitboard x) {
     return __builtin_ctzll(x);
 }
 
-// popcount % 2 == 0 ? -1 : 1. おそらくこっちの方がいいはず
+// popcount % 2
 inline int parity(Bitboard x) {
+#ifdef __EMSCRIPTEN__
     x ^= x >> 32;
     x ^= x >> 16;
     x ^= x >> 8;
     x ^= x >> 4;
     x ^= x >> 2;
-    return ((x ^ (x << 1)) & 2) - 1;
+    return x ^ x >> 1 & 1;
+#else
+    return popcount(x) & 1;
+#endif
 }
 
 inline int paritySum(Bitboard occupancy) {

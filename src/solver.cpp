@@ -22,7 +22,58 @@ void Solver::clear() {
     std::memset(transpositionTable2, 0, sizeof(SearchedPosition<int>) * TTSize);
 }
 
-int Solver::negaAlpha(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed) {
+int Solver::negaAlpha1(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed) {
+    if (depth <= 4)
+        return negaAlpha2(p, o, alpha, beta, depth, passed);
+
+    ++nodeCount;
+
+    Bitboard moves = getMoves(p, o);
+
+    // パスの処理
+    if (moves == 0ULL)
+        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negaAlpha1(o, p, -beta, -alpha, depth, true));
+
+    // 奇数空きの区画から打つ方針。（偶数理論）
+    Bitboard betterMoves = 0ULL;
+    Bitboard t;
+    t = moves & LeftTop;
+    betterMoves |= t & static_cast<Bitboard>(-parity(t));
+    t = moves & LeftBottom;
+    betterMoves |= t & static_cast<Bitboard>(-parity(t));
+    t = moves & RightTop;
+    betterMoves |= t & static_cast<Bitboard>(-parity(t));
+    t = moves & RightBottom;
+    betterMoves |= t & static_cast<Bitboard>(-parity(t));
+
+    moves ^= betterMoves;
+
+    int bestScore = -64;
+
+    while (betterMoves) {
+        Bitboard sqbit = betterMoves & -betterMoves;
+        betterMoves ^= sqbit;
+        Bitboard flip = getFlip(p, o, sqbit);
+        int score = -negaAlpha1(o ^ flip, p ^ flip ^ sqbit, -beta, -std::max(bestScore, alpha), depth - 1, false);
+        if (score >= beta)
+            return score;
+        bestScore = std::max(score, bestScore);
+    }
+
+    while (moves) {
+        Bitboard sqbit = moves & -moves;
+        moves ^= sqbit;
+        Bitboard flip = getFlip(p, o, sqbit);
+        int score = -negaAlpha1(o ^ flip, p ^ flip ^ sqbit, -beta, -std::max(bestScore, alpha), depth - 1, false);
+        if (score >= beta)
+            return score;
+        bestScore = std::max(score, bestScore);
+    }
+
+    return bestScore;
+}
+
+int Solver::negaAlpha2(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed) {
     assert(depth > 0);
     ++nodeCount;
     // todo: ひっくり返る石の数を表引きする
@@ -45,7 +96,7 @@ int Solver::negaAlpha(Bitboard p, Bitboard o, int alpha, int beta, int depth, bo
 
     // パスの処理
     if (moves == 0ULL)
-        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negaAlpha(o, p, -beta, -alpha, depth, true));
+        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negaAlpha2(o, p, -beta, -alpha, depth, true));
 
     // 打てるところがあるとき
 
@@ -57,7 +108,7 @@ int Solver::negaAlpha(Bitboard p, Bitboard o, int alpha, int beta, int depth, bo
         // 盤面をすすめる
         Bitboard flip = getFlip(p, o, sqbit);
         // 敵からみた石差が返ってくるため, 符号を反転させる
-        int score = -negaAlpha(o ^ flip, p ^ flip ^ sqbit, -beta, -std::max(bestScore, alpha), depth - 1, false); // 下限がbestScore or minになる（大きい方）. 相手から見たときの符号反転注意
+        int score = -negaAlpha2(o ^ flip, p ^ flip ^ sqbit, -beta, -std::max(bestScore, alpha), depth - 1, false); // 下限がbestScore or minになる（大きい方）. 相手から見たときの符号反転注意
         // 枝刈りできます(少なくともbestScoreがmax以上になるので)
         if (score >= beta)
             return score;
@@ -68,8 +119,8 @@ int Solver::negaAlpha(Bitboard p, Bitboard o, int alpha, int beta, int depth, bo
 }
 
 int Solver::negaScout2(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed) {
-    if (depth <= 6)
-        return negaAlpha(p, o, alpha, beta, depth, passed);
+    if (depth <= 8)
+        return negaAlpha1(p, o, alpha, beta, depth, passed);
 
     ++nodeCount;
 
@@ -177,7 +228,7 @@ int Solver::negaScout2(Bitboard p, Bitboard o, int alpha, int beta, int depth, b
 }
 
 int Solver::negaScout1(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed) {
-    if (depth <= 16)
+    if (depth <= 15)
         return negaScout2(p, o, alpha, beta, depth, passed);
 
     ++nodeCount;
@@ -381,6 +432,7 @@ void ffotest() {
         std::cout << "BestScore:" << solution.bestScore << std::endl
                   << "ScoreLockTime:" << (solution.scoreLockTime / 1000.0) << " sec" << std::endl
                   << "WholeTime:" << (solution.wholeTime / 1000.0) << " sec" << std::endl
+                  << "Nodes:" << solution.nodeCount << std::endl
                   << "NPS:" << solution.NPS() << std::endl;
 
         for (int sq : solution.bestMoves) {
