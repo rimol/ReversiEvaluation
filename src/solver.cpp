@@ -29,12 +29,10 @@ int Solver::negaAlpha(Bitboard p, Bitboard o, int alpha, int beta, bool passed) 
         Bitboard flip = getFlip(p, o, ~(p | o));
 
         if (flip != 0ULL) {
-            ++nodeCount;
             return popcount(p) - popcount(o) + (popcount(flip) << 1) + 1;
         } else {
             flip = getFlip(o, p, ~(p | o));
             if (flip != 0ULL) {
-                ++nodeCount;
                 return popcount(p) - popcount(o) - (popcount(flip) << 1) - 1;
             } else {
                 return popcount(p) - popcount(o);
