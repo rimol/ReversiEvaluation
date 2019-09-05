@@ -288,6 +288,7 @@ void generateTrainingData(const std::string &recordFolderpath, const std::string
     std::vector<std::string> recordFilepaths;
     enumerateFilesIn(recordFolderpath, recordFilepaths);
 
+    int numConverted = 0;
     for (const auto &filepath : recordFilepaths) {
         if (getExtension(filepath) != "txt")
             continue;
@@ -304,7 +305,6 @@ void generateTrainingData(const std::string &recordFolderpath, const std::string
         }
 
         std::string recordStr;
-        int numConverted = 0;
         std::ifstream ifs(filepath);
         while (getline(ifs, recordStr)) {
             Reversi reversi;
@@ -336,25 +336,25 @@ void generateTrainingData(const std::string &recordFolderpath, const std::string
             numConverted += (int)success;
         }
     }
+
+    std::cout << numConverted << " games were converted to training data." << std::endl;
 }
 
 // 最初がF5になるように回転する
-void rotateRecord(std::string& recordStr) {
+void rotateRecord(std::string &recordStr) {
     std::string firstMove = recordStr.substr(0, 2);
     if (firstMove == "C4") {
         for (int i = 0; i < recordStr.size() - 1; i += 2) {
             recordStr[i] = 'H' - (recordStr[i] - 'A');
             recordStr[i + 1] = '8' - (recordStr[i + 1] - '1');
         }
-    }
-    else if (firstMove == "D3") {
+    } else if (firstMove == "D3") {
         for (int i = 0; i < recordStr.size() - 1; i += 2) {
             char t = 'H' - (recordStr[i + 1] - '1');
             recordStr[i + 1] = ('H' - recordStr[i]) + '1';
             recordStr[i] = t;
         }
-    }
-    else if (firstMove == "E6") {
+    } else if (firstMove == "E6") {
         for (int i = 0; i < recordStr.size() - 1; i += 2) {
             char t = 'H' - ('8' - recordStr[i + 1]);
             recordStr[i + 1] = '8' - ('H' - recordStr[i]);
@@ -362,7 +362,8 @@ void rotateRecord(std::string& recordStr) {
         }
     }
     // F5または変な棋譜
-    else return;
+    else
+        return;
 }
 
 void correctRecords(const std::string &recordFolderpath, const std::string &saveFolderpath, int exactDepth, Solver &solver) {
