@@ -224,6 +224,7 @@ void doCorrectRecords() {
 
 int main() {
     initToBase3();
+    initCountFlipTables();
     // test();
     while (true) {
         std::cout << "Enter a command:";

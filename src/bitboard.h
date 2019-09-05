@@ -372,6 +372,57 @@ inline Bitboard getFlip(Bitboard p, Bitboard o, Bitboard sqbit) {
 #endif
 }
 
+/*
+定数をシフトしてマスクを作ると余分な部分もみてしまうので、
+00000000
+00000000
+00000000
+10000000
+01000000
+00100000
+00010000
+00001000
+のようなそれを省いたマスクをあらかじめ作っておく
+*/
+extern Bitboard DiagonalMask[64][2];
+// CountFlip[i][j] := iの位置に現在手番のプレイヤーが石を置いたときにひっくり返る石の数
+extern int CountFlip[8][1 << 8];
+
+void initCountFlipTables();
+
+// 残り1マス空いている時のpopcount(flip)
+inline int countFlip(Bitboard p, int sq) {
+    int x = sq & 7;
+    int y = 7 - (sq >> 3);
+    /*  MSB
+        A***A*** diag2
+        *B**B**B
+        **C*C*C*
+        ***DDD**
+        ABCDEFGH hor
+        ***FFF**
+        **G*G*G*
+        *H**H**H LSB
+            v   diag1
+            e
+            r
+
+
+        hor = ABCDEFGH
+        ver = HGFEDCBA
+        diag1 = ABCDEFGH
+        diag2 = 0HGFEDCB
+
+        な感じでビットが抽出される。向きに注意
+    */
+    int hor = p << (y * 8) >> 56;
+    int ver = (p >> x & 0x0101010101010101ULL) * 0x8040201008040201ULL >> 56;
+    int diag1 = (p & DiagonalMask[sq][0]) * 0x0101010101010101ULL >> 56;
+    int diag2 = (p & DiagonalMask[sq][1]) * 0x0101010101010101ULL >> 56;
+
+    return CountFlip[x][hor] + CountFlip[y][ver] + CountFlip[x][diag1] + CountFlip[x][diag2];
+}
+
 inline int getMobility(Bitboard p, Bitboard o) {
     return popcount(getMoves(p, o));
 }

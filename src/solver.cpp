@@ -23,7 +23,7 @@ void Solver::clear() {
 }
 
 int Solver::negaAlpha1(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed) {
-    if (depth <= 4)
+    if (depth <= 3)
         return negaAlpha2(p, o, alpha, beta, depth, passed);
 
     ++nodeCount;
@@ -76,20 +76,16 @@ int Solver::negaAlpha1(Bitboard p, Bitboard o, int alpha, int beta, int depth, b
 int Solver::negaAlpha2(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed) {
     assert(depth > 0);
     ++nodeCount;
-    // todo: ひっくり返る石の数を表引きする
-    if (depth == 1) {
-        Bitboard flip = getFlip(p, o, ~(p | o));
 
-        if (flip != 0ULL) {
-            return popcount(p) - popcount(o) + (popcount(flip) << 1) + 1;
-        } else {
-            flip = getFlip(o, p, ~(p | o));
-            if (flip != 0ULL) {
-                return popcount(p) - popcount(o) - (popcount(flip) << 1) - 1;
-            } else {
-                return popcount(p) - popcount(o);
-            }
-        }
+    if (depth == 1) {
+        int emptySQ = tzcnt(~(p | o));
+        int numFlip = countFlip(p, emptySQ);
+
+        if (numFlip != 0ULL)
+            return popcount(p) - popcount(o) + numFlip * 2 + 1;
+
+        numFlip = countFlip(o, emptySQ);
+        return numFlip != 0ULL ? (popcount(p) - popcount(o) - numFlip * 2 - 1) : (popcount(p) - popcount(o));
     }
 
     Bitboard moves = getMoves(p, o);
@@ -119,7 +115,7 @@ int Solver::negaAlpha2(Bitboard p, Bitboard o, int alpha, int beta, int depth, b
 }
 
 int Solver::negaScout2(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed) {
-    if (depth <= 8)
+    if (depth <= 7)
         return negaAlpha1(p, o, alpha, beta, depth, passed);
 
     ++nodeCount;
@@ -345,6 +341,11 @@ std::vector<int> Solver::getBestMoves(Bitboard p, Bitboard o, int bestScore) {
     while (!reversi.isFinished) {
         Bitboard moves = reversi.moves;
         int depth = 64 - reversi.stoneCount();
+
+        if (depth == 1) {
+            bestMoves.push_back(tzcnt(moves));
+            break;
+        }
 
         while (moves != 0ULL) {
             Bitboard sqbit = moves & -moves;

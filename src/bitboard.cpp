@@ -304,3 +304,38 @@ Bitboard getStableStones(Bitboard p, Bitboard o) {
 
     return stable;
 }
+
+Bitboard DiagonalMask[64][2];
+int CountFlip[8][1 << 8];
+
+void initCountFlipTables() {
+    // 対角線のマスク
+    for (int i = 0; i < 64; ++i) {
+        Bitboard diag1 = 1ULL << i, diag2 = 1ULL << i;
+
+        for (int j = 0; j < 6; ++j) {
+            diag1 |= diag1 << 9 | diag1 >> 9;
+            diag2 |= diag2 << 7 | diag2 >> 7;
+            diag1 &= 0x7e7e7e7e7e7e7e7eULL;
+            diag2 &= 0x7e7e7e7e7e7e7e7eULL;
+        }
+
+        DiagonalMask[i][0] = diag1 << 9 | diag1 >> 9;
+        DiagonalMask[i][1] = diag2 << 7 | diag2 >> 7;
+    }
+
+    // CountFlip
+    for (int i = 0; i < 8; ++i) {
+        for (int j = 0; j < (1 << 8); ++j) {
+            if (j >> i & 1)
+                continue;
+
+            Bitboard sqbit = 1ULL << i;
+            Bitboard p = static_cast<Bitboard>(j);
+            Bitboard o = ~p ^ sqbit;
+
+            Bitboard flip = getFlip(p, o, sqbit);
+            CountFlip[i][j] = popcount(flip);
+        }
+    }
+}
