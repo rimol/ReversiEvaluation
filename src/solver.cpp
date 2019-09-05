@@ -82,10 +82,13 @@ int Solver::negaAlpha2(Bitboard p, Bitboard o, int alpha, int beta, int depth, b
         int numFlip = countFlip(p, emptySQ);
 
         if (numFlip != 0ULL)
-            return popcount(p) - popcount(o) + numFlip * 2 + 1;
+            return (popcount(p) + numFlip) * 2 - 62;
 
         numFlip = countFlip(o, emptySQ);
-        return numFlip != 0ULL ? (popcount(p) - popcount(o) - numFlip * 2 - 1) : (popcount(p) - popcount(o));
+        if (numFlip != 0ULL)
+            return (popcount(p) - numFlip) * 2 - 64;
+        else
+            return popcount(p) * 2 - 63;
     }
 
     Bitboard moves = getMoves(p, o);
