@@ -460,15 +460,15 @@ void compressEvalFiles(const std::string &weightFolderpath, const std::string &s
         std::ofstream ofs(addFileNameAtEnd(saveFolderpath, std::to_string(i), "bin"), std::ios::binary);
         for (int j = 0; j < pattern.numGroup(); ++j) {
             std::vector<double> weight(pattern.numIndex(j));
-            std::vector<double> buffer(pattern.numPackedIndex(j));
+            std::vector<int> buffer(pattern.numPackedIndex(j));
             ifs.seekg(j * pow3(10) * sizeof(double));
             ifs.read(reinterpret_cast<char *>(&weight[0]), weight.size() * sizeof(double));
             for (int k = 0; k < pattern.numIndex(j); ++k) {
                 if (weight[k] != 0) {
-                    buffer[pattern.packedIndex(j, k)] = weight[k];
+                    buffer[pattern.packedIndex(j, k)] = static_cast<int>(weight[k] * 1000.0);
                 }
             }
-            ofs.write(reinterpret_cast<char *>(&buffer[0]), buffer.size() * sizeof(double));
+            ofs.write(reinterpret_cast<char *>(&buffer[0]), buffer.size() * sizeof(int));
         }
         ifs.close();
     }

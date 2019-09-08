@@ -15,6 +15,3 @@ void correctRecords(const std::string &recordFolderpath, const std::string &save
 // outputのフォルダ内のi.binはまずクリアされるので注意
 void mergeTrainingDataFiles(const std::vector<std::string> &inputFolderpaths, const std::string &outputFolderpath);
 void compressEvalFiles(const std::string &weightFolderpath, const std::string &saveFolderpath);
-// record.pに常に黒石ビット、oに常に白石ビットが入るように局面データを修正する関数
-// 今更だけど、Recordじゃなくて、Positionがクラス名として適当では？ｗ
-// void fixRecords(const std::string &inputFolderpath, const std::string &outputFolderpath);

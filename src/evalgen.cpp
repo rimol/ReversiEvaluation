@@ -10,14 +10,14 @@
 #include <set>
 #include <vector>
 
-#define FOREACH_FEATURE_VALUE(Statement)                            \
-    do {                                                            \
-        for (int _i = 0; _i < usedPattern.numGroup(); ++_i) {       \
+#define FOREACH_FEATURE_VALUE(Statement)                                  \
+    do {                                                                  \
+        for (int _i = 0; _i < usedPattern.numGroup(); ++_i) {             \
             for (int _j = 0; _j < usedPattern.numPackedIndex(_i); ++_j) { \
-                auto &fv = featureValues[_i][_j];                   \
-                { Statement }                                       \
-            }                                                       \
-        }                                                           \
+                auto &fv = featureValues[_i][_j];                         \
+                { Statement }                                             \
+            }                                                             \
+        }                                                                 \
     } while (false)
 
 #define FOREACH_FEATURE_IN(_trainingPosEx, Statement)                              \
@@ -163,7 +163,8 @@ void EvalGen::run(const std::string &trainingDataFolderPath, const std::string &
             std::ofstream ofs(addFileNameAtEnd(saveFolderPath, std::to_string(i), "bin"), std::ios::binary);
             // 評価値のみ保存したいので仕方なしループ
             FOREACH_FEATURE_VALUE(
-                ofs.write((char *)&fv.weight, sizeof(double)););
+                int w = static_cast<int>(fv.weight * 1000.0);
+                ofs.write(reinterpret_cast<char *>(&w), sizeof(int)););
         }
     }
 }

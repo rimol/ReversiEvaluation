@@ -11,8 +11,6 @@
 using std::cerr;
 using std::endl;
 
-// TODO: パターンの種類によってMaxNumPatternのところを変える
-// symmetricなパターンを詰める
 PatternEvaluator::PatternEvaluator(const std::string &weightFolderpath) {
     auto infoFilepath = addFileNameAtEnd(weightFolderpath, "info", "txt");
     std::ifstream ifs(infoFilepath);
@@ -27,18 +25,18 @@ PatternEvaluator::PatternEvaluator(const std::string &weightFolderpath) {
 
     ifs.close();
 
-    weights = new double **[numStages];
+    weights = new int **[numStages];
     for (int i = 0; i < numStages; ++i) {
-        weights[i] = new double *[usedPattern->numGroup()];
+        weights[i] = new int *[usedPattern->numGroup()];
         for (int j = 0; j < usedPattern->numGroup(); ++j) {
-            weights[i][j] = new double[usedPattern->numPackedIndex(j)];
+            weights[i][j] = new int[usedPattern->numPackedIndex(j)];
         }
     }
 
     for (int i = 0; i < numStages; ++i) {
         ifs.open(addFileNameAtEnd(weightFolderpath, std::to_string(i + 1), "bin"), std::ios::binary);
         for (int j = 0; j < usedPattern->numGroup(); ++j) {
-            ifs.read((char *)weights[i][j], sizeof(double) * usedPattern->numPackedIndex(j));
+            ifs.read(reinterpret_cast<char *>(weights[i][j]), sizeof(int) * usedPattern->numPackedIndex(j));
         }
         ifs.close();
     }
@@ -67,7 +65,7 @@ double PatternEvaluator::evaluate(Bitboard p, Bitboard o) const {
 
     int t = getStage(p, o);
 
-    double e = 0.0;
+    int e = 0;
     for (int i = 0; i < usedPattern->numPattern(); ++i) {
         int group = usedPattern->group(i);
         Bitboard p_ = playerRotatedBB[usedPattern->rotationType(i)];
@@ -76,7 +74,7 @@ double PatternEvaluator::evaluate(Bitboard p, Bitboard o) const {
         e += weights[t][group][usedPattern->extract(p_, o_, group)];
     }
 
-    return e;
+    return static_cast<double>(e) / 1000.0;
 }
 
 double ClassicEvaluator::evaluate(Bitboard p, Bitboard o) const {
