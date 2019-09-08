@@ -1,5 +1,6 @@
 #include "pattern.h"
 #include <algorithm>
+#include <cassert>
 #include <vector>
 
 int ToBase3[1 << MaxDigit];
@@ -20,18 +21,23 @@ Pattern &Pattern::operator=(const Pattern &pattern) {
     _numPattern = pattern._numPattern;
 
     _mask = new Bitboard[_numGroup];
+    _numIndex = new int[_numGroup];
+    _numPackedIndex = new int[_numGroup];
     _group = new int[_numPattern];
     _rotationType = new RotationType[_numPattern];
-    symmetricPattern = new int *[_numGroup];
+    _packedIndex = new int *[_numGroup];
+
     for (int i = 0; i < _numGroup; ++i) {
-        symmetricPattern[i] = new int[MaxNumPattern];
+        _numIndex[i] = pattern._numIndex[i];
+        _numPackedIndex[i] = pattern._numPackedIndex[i];
     }
 
     for (int i = 0; i < _numGroup; ++i) {
         _mask[i] = pattern._mask[i];
+        _packedIndex[i] = new int[_numIndex[i]];
 
-        for (int j = 0; j < MaxNumPattern; ++j) {
-            symmetricPattern[i][j] = pattern.symmetricPattern[i][j];
+        for (int j = 0; j < _numIndex[i]; ++j) {
+            _packedIndex[i][j] = pattern._packedIndex[i][j];
         }
     }
 
@@ -43,7 +49,7 @@ Pattern &Pattern::operator=(const Pattern &pattern) {
     return *this;
 }
 
-Pattern::Pattern() : _mask(nullptr), _group(nullptr), _rotationType(nullptr), symmetricPattern(nullptr) {}
+Pattern::Pattern() : _mask(nullptr), _numIndex(nullptr), _numPackedIndex(nullptr), _group(nullptr), _rotationType(nullptr), _packedIndex(nullptr) {}
 
 Pattern::Pattern(const Pattern &pattern) {
     *this = pattern;
@@ -53,6 +59,9 @@ Pattern::Pattern(const std::string &patternDefStr) : _numPattern() {
     _numGroup = (patternDefStr.size() - 1) / 72;
 
     _mask = new Bitboard[numGroup()];
+    _numIndex = new int[numGroup()];
+    _numPackedIndex = new int[numGroup()];
+
     std::fill(_mask, _mask + numGroup(), 0ULL);
 
     enum Symmetry {
@@ -82,6 +91,8 @@ Pattern::Pattern(const std::string &patternDefStr) : _numPattern() {
         // 各特徴について90,180,270回転したマスクを生成して何種類あるか調べていく
         // 左右反転も考える
         for (int i = 0; i < numGroup(); ++i) {
+            assert(popcount(_mask[i]) <= MaxDigit);
+            _numIndex[i] = pow3(popcount(_mask[i]));
             Bitboard mask0 = _mask[i];
             Bitboard mask90 = rotateRightBy90(mask0);
             Bitboard mask180 = rotateBy180(mask0);
@@ -181,9 +192,9 @@ Pattern::Pattern(const std::string &patternDefStr) : _numPattern() {
     }
     // _group, _rotationType 初期化完了
 
-    symmetricPattern = new int *[numGroup()];
+    _packedIndex = new int *[numGroup()];
     for (int i = 0; i < numGroup(); ++i) {
-        symmetricPattern[i] = new int[MaxNumPattern];
+        _packedIndex[i] = new int[_numIndex[i]];
     }
 
     {
@@ -202,7 +213,8 @@ Pattern::Pattern(const std::string &patternDefStr) : _numPattern() {
             Bitboard d = flipDiagonalA8H1(_mask[i]);
             if (_mask[i] == v || _mask[i] == d) {
                 int flipType = _mask[i] == v ? 0 : 1;
-                for (int j = 0; j < pow3(popcount(_mask[i])); ++j) {
+                _numPackedIndex[i] = 0;
+                for (int j = 0; j < _numIndex[i]; ++j) {
                     int k = j;
                     Bitboard m = _mask[i];
                     std::vector<std::pair<int, int>> digits;
@@ -218,11 +230,14 @@ Pattern::Pattern(const std::string &patternDefStr) : _numPattern() {
                         l += digits[i].second;
                     }
 
-                    symmetricPattern[i][j] = symmetricPattern[i][l] = std::min(j, l);
+                    if (j <= l) {
+                        _packedIndex[i][j] = _packedIndex[i][l] = _numPackedIndex[i]++;
+                    }
                 }
             } else {
-                for (int j = 0; j < MaxNumPattern; ++j) {
-                    symmetricPattern[i][j] = j;
+                _numPackedIndex[i] = _numIndex[i];
+                for (int j = 0; j < _numIndex[i]; ++j) {
+                    _packedIndex[i][j] = j;
                 }
             }
         }
@@ -233,11 +248,13 @@ Pattern::~Pattern() {
     delete[] _group;
     delete[] _rotationType;
     delete[] _mask;
+    delete[] _numIndex;
+    delete[] _numPackedIndex;
 
     for (int i = 0; i < numGroup(); ++i) {
-        delete[] symmetricPattern[i];
+        delete[] _packedIndex[i];
     }
-    delete[] symmetricPattern;
+    delete[] _packedIndex;
 }
 
 const std::string LogistelloPatterns = R"(

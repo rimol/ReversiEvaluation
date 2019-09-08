@@ -10,29 +10,33 @@
 #include <set>
 #include <vector>
 
-#define FOREACH_FEATURE_VALUE(Statement)               \
-    for (int i = 0; i < usedPattern.numGroup(); ++i) { \
-        for (int j = 0; j < MaxNumPattern; ++j) {      \
-            auto &fv = featureValues[i][j];            \
-            Statement                                  \
-        }                                              \
-    }
+#define FOREACH_FEATURE_VALUE(Statement)                            \
+    do {                                                            \
+        for (int _i = 0; _i < usedPattern.numGroup(); ++_i) {       \
+            for (int _j = 0; _j < usedPattern.numPackedIndex(_i); ++_j) { \
+                auto &fv = featureValues[_i][_j];                   \
+                { Statement }                                       \
+            }                                                       \
+        }                                                           \
+    } while (false)
 
-#define FOREACH_FEATURE_IN(_trainingPosEx, Statement)                         \
-    for (int i = 0; i < usedPattern.numPattern(); ++i) {                      \
-        int _g = usedPattern.group(i);                                        \
-        Bitboard _p = (_trainingPosEx).rotatedP[usedPattern.rotationType(i)]; \
-        Bitboard _o = (_trainingPosEx).rotatedO[usedPattern.rotationType(i)]; \
-        auto &fv = featureValues[_g][usedPattern.extract(_p, _o, _g)];        \
-        Statement                                                             \
-    }
+#define FOREACH_FEATURE_IN(_trainingPosEx, Statement)                              \
+    do {                                                                           \
+        for (int _i = 0; _i < usedPattern.numPattern(); ++_i) {                    \
+            int _g = usedPattern.group(_i);                                        \
+            Bitboard _p = (_trainingPosEx).rotatedP[usedPattern.rotationType(_i)]; \
+            Bitboard _o = (_trainingPosEx).rotatedO[usedPattern.rotationType(_i)]; \
+            auto &fv = featureValues[_g][usedPattern.extract(_p, _o, _g)];         \
+            { Statement }                                                          \
+        }                                                                          \
+    } while (false)
 
 EvalGen::EvalGen(int numStages, const std::string &patternName) : numStages(numStages), patternName(patternName), usedPattern(Patterns.at(patternName)) {
     assert(60 % numStages == 0);
     stageInterval = 60 / numStages;
     featureValues = new FeatureValue *[usedPattern.numGroup()];
     for (int i = 0; i < usedPattern.numGroup(); ++i) {
-        featureValues[i] = new FeatureValue[MaxNumPattern];
+        featureValues[i] = new FeatureValue[usedPattern.numPackedIndex(i)];
     }
 }
 
@@ -47,7 +51,7 @@ constexpr double beta = 0.01;
 
 void EvalGen::clearFeatureValues() {
     for (int i = 0; i < usedPattern.numGroup(); ++i) {
-        for (int j = 0; j < MaxNumPattern; ++j) {
+        for (int j = 0; j < usedPattern.numPackedIndex(i); ++j) {
             featureValues[i][j] = FeatureValue();
         }
     }
@@ -56,14 +60,14 @@ void EvalGen::clearFeatureValues() {
 // y - e
 inline double EvalGen::evalLoss(const TrainingPositionEx &trainingPosEx) {
     double e = 0.0;
-    FOREACH_FEATURE_IN(trainingPosEx, { e += fv.weight; })
+    FOREACH_FEATURE_IN(trainingPosEx, { e += fv.weight; });
     return (double)trainingPosEx.result - e;
 }
 
 inline void EvalGen::applyUpdatesOfEvalValues() {
     FOREACH_FEATURE_VALUE(
         fv.weight += fv.update * fv.stepSize;
-        fv.update = 0.0;)
+        fv.update = 0.0;);
 }
 
 // 評価値を計算してファイルに保存し、実際の結果と最終的な評価値による予測値の分散を返す。
@@ -94,11 +98,11 @@ double EvalGen::calculateEvaluationValue(const std::vector<std::string> &trainin
 
     // 予め各特徴のステップサイズを計算しておく。
     for (const auto &trainingPosEx : trainingPositions) {
-        FOREACH_FEATURE_IN(trainingPosEx, { ++fv.stepSize; })
+        FOREACH_FEATURE_IN(trainingPosEx, { ++fv.stepSize; });
     }
 
     FOREACH_FEATURE_VALUE(
-        fv.stepSize = std::min(beta / 50.0, beta / fv.stepSize);)
+        fv.stepSize = std::min(beta / 50.0, beta / fv.stepSize););
 
     double prevSquaredLossSum = 0.0;
     long long loopCounter = 0;
@@ -111,7 +115,7 @@ double EvalGen::calculateEvaluationValue(const std::vector<std::string> &trainin
             double loss = evalLoss(trainingPosEx);
             squaredLossSum += loss * loss; // Los!
             // このデータで出現する各特徴に対し更新分を加算していく
-            FOREACH_FEATURE_IN(trainingPosEx, { fv.update += loss; })
+            FOREACH_FEATURE_IN(trainingPosEx, { fv.update += loss; });
         }
 
         double currentVariance = squaredLossSum / (double)numUsedPositions;
@@ -159,7 +163,7 @@ void EvalGen::run(const std::string &trainingDataFolderPath, const std::string &
             std::ofstream ofs(addFileNameAtEnd(saveFolderPath, std::to_string(i), "bin"), std::ios::binary);
             // 評価値のみ保存したいので仕方なしループ
             FOREACH_FEATURE_VALUE(
-                ofs.write((char *)&fv.weight, sizeof(double));)
+                ofs.write((char *)&fv.weight, sizeof(double)););
         }
     }
 }

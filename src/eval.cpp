@@ -31,14 +31,14 @@ PatternEvaluator::PatternEvaluator(const std::string &weightFolderpath) {
     for (int i = 0; i < numStages; ++i) {
         weights[i] = new double *[usedPattern->numGroup()];
         for (int j = 0; j < usedPattern->numGroup(); ++j) {
-            weights[i][j] = new double[MaxNumPattern];
+            weights[i][j] = new double[usedPattern->numPackedIndex(j)];
         }
     }
 
     for (int i = 0; i < numStages; ++i) {
         ifs.open(addFileNameAtEnd(weightFolderpath, std::to_string(i + 1), "bin"), std::ios::binary);
         for (int j = 0; j < usedPattern->numGroup(); ++j) {
-            ifs.read((char *)weights[i][j], sizeof(double) * MaxNumPattern);
+            ifs.read((char *)weights[i][j], sizeof(double) * usedPattern->numPackedIndex(j));
         }
         ifs.close();
     }

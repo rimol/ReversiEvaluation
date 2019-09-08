@@ -13,8 +13,6 @@ constexpr int pow3(int n) {
     return r;
 }
 
-constexpr int MaxNumPattern = pow3(MaxDigit);
-
 // abcdef...(2) -> abcdef...(3)
 extern int ToBase3[1 << MaxDigit];
 void initToBase3();
@@ -41,27 +39,45 @@ enum RotationType {
 
 class Pattern {
 private:
-    int **symmetricPattern;
+    // _packedIndex[i][j] := group i(i <= numGroup)のパターンインデックスj(j <= 3^popcount(mask[i]))を対称性で圧縮した新しいインデックス
+    int **_packedIndex;
+    //  回転・反転して同じパターンを1つとして数えたパターンの数
     int _numGroup;
+    // 回転、反転をそれぞれ違うものとして数えたパターンの数
     int _numPattern;
     int *_group;
     RotationType *_rotationType;
     Bitboard *_mask;
 
-public:
-    inline int numGroup() const { return _numGroup; }
-    inline int numPattern() const { return _numPattern; }
+    // numIndex[i] := 3^popcount(mask[i])
+    int *_numIndex;
+    // numPackedIndex[i] := 対称なインデックスを1つにして数えたパターンiのインデックスの数
+    int *_numPackedIndex;
 
-    inline int group(int pattern) const {
+public:
+    int numGroup() const { return _numGroup; }
+    int numPattern() const { return _numPattern; }
+    int numIndex(int group) const { return _numIndex[group]; }
+    int numPackedIndex(int group) const { return _numPackedIndex[group]; }
+
+    int group(int pattern) const {
         return _group[pattern];
     }
 
-    inline int rotationType(int pattern) const {
+    int rotationType(int pattern) const {
         return _rotationType[pattern];
     }
 
-    inline int extract(Bitboard p, Bitboard o, int group) const {
-        return symmetricPattern[group][convert(pext(p, _mask[group]), pext(o, _mask[group]))];
+    int packedIndex(int group, int patternIndex) const {
+        return _packedIndex[group][patternIndex];
+    }
+
+    int extract(Bitboard p, Bitboard o, int group) const {
+        return _packedIndex[group][convert(pext(p, _mask[group]), pext(o, _mask[group]))];
+    }
+
+    Bitboard mask(int group) const {
+        return _mask[group];
     }
 
     Pattern &operator=(const Pattern &pattern);

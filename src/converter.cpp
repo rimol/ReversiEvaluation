@@ -445,53 +445,34 @@ void mergeTrainingDataFiles(const std::vector<std::string> &inputFolderpaths, co
     }
 }
 
-// void fixRecords(const std::string &inputFolderpath, const std::string &outputFolderpath) {
-//     std::ifstream manyifs[60];
-//     std::ofstream manyofs[60];
-//     for (int i = 0; i < 60; ++i) {
-//         std::string inputFilepath = addFileNameAtEnd(inputFolderpath, std::to_string(i + 1), "bin");
-//         std::string outputFilepath = addFileNameAtEnd(outputFolderpath, std::to_string(i + 1), "bin");
-//         manyifs[i] = std::ifstream(inputFilepath, std::ios::binary);
-//         manyofs[i] = std::ofstream(outputFilepath, std::ios::binary);
+void compressEvalFiles(const std::string &weightFolderpath, const std::string &saveFolderpath) {
+    std::ifstream ifs(addFileNameAtEnd(weightFolderpath, "info", "txt"));
 
-//         if (!manyifs[i].is_open()) {
-//             std::cout << "Can't open a file: " << inputFilepath << std::endl;
-//             return;
-//         }
+    int numStages;
+    std::string patternName;
+    ifs >> patternName;
+    const auto &pattern = Patterns.at(patternName);
+    ifs >> numStages;
+    ifs.close();
 
-//         if (!manyofs[i].is_open()) {
-//             std::cout << "Can't open a file: " << outputFilepath << std::endl;
-//             return;
-//         }
-//     }
+    for (int i = 1; i <= numStages; ++i) {
+        ifs.open(addFileNameAtEnd(weightFolderpath, std::to_string(i), "bin"), std::ios::binary);
+        std::ofstream ofs(addFileNameAtEnd(saveFolderpath, std::to_string(i), "bin"), std::ios::binary);
+        for (int j = 0; j < pattern.numGroup(); ++j) {
+            std::vector<double> weight(pattern.numIndex(j));
+            std::vector<double> buffer(pattern.numPackedIndex(j));
+            ifs.seekg(j * pow3(10) * sizeof(double));
+            ifs.read(reinterpret_cast<char *>(&weight[0]), weight.size() * sizeof(double));
+            for (int k = 0; k < pattern.numIndex(j); ++k) {
+                if (weight[k] != 0) {
+                    buffer[pattern.packedIndex(j, k)] = weight[k];
+                }
+            }
+            ofs.write(reinterpret_cast<char *>(&buffer[0]), buffer.size() * sizeof(double));
+        }
+        ifs.close();
+    }
 
-//     while (!manyifs[0].eof()) {
-//         Reversi reversi;
-//         int i = 0;
-//         while (!reversi.isFinished) {
-//             Record record;
-//             manyifs[i].read((char *)&record, sizeof(Record));
-
-//             if (manyifs[i].eof()) {
-//                 break;
-//             }
-
-//             Bitboard sqbit = (record.p | record.o) ^ (reversi.p | reversi.o);
-
-//             assert(popcount(sqbit) == 1);
-
-//             if (reversi.move(tzcnt(sqbit))) {
-//                 assert(reversi.p == record.p && reversi.o == record.o);
-//                 if (reversi.c == White) {
-//                     std::swap(record.p, record.o);
-//                     record.result *= -1;
-//                 }
-
-//                 manyofs[i].write((char *)&record, sizeof(Record));
-//             } else
-//                 assert(false);
-
-//             ++i;
-//         }
-//     }
-// }
+    std::ofstream ofs(addFileNameAtEnd(saveFolderpath, "info", "txt"));
+    ofs << patternName << " " << numStages;
+}

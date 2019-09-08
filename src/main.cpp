@@ -222,6 +222,16 @@ void doCorrectRecords() {
     correctRecords(recordFolderpath, saveFolderpath, exactDepth, solver);
 }
 
+void doEvalCompress() {
+    std::string weightFolderpath, saveFolderpath;
+    std::cout << "Weight Folder Path:";
+    std::cin >> weightFolderpath;
+    std::cout << "Save Folder Path:";
+    std::cin >> saveFolderpath;
+
+    compressEvalFiles(weightFolderpath, saveFolderpath);
+}
+
 int main() {
     initToBase3();
     initCountFlipTables();
@@ -253,6 +263,8 @@ int main() {
         //     doRecFix();
         else if (command == "traingen")
             doTrainingDataGen();
+        else if (command == "compresseval")
+            doEvalCompress();
         else if (command == "exit")
             break;
     }
