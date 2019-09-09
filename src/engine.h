@@ -30,8 +30,9 @@ public:
 // これをNegaScoutの親にするとよさそう.
 class AlphaBetaEngine : public ReversiEngine {
 protected:
+    int currentSearchDepth;
     const Evaluator &evaluator;
-    double negaAlpha(Bitboard p, Bitboard o, double alpha, double beta, bool passed, int depth);
+    double negaAlpha(Bitboard p, Bitboard o, double alpha, double beta, int depth, bool passed);
 
 public:
     virtual std::vector<MoveWithScore> evalAllMoves(Bitboard p, Bitboard o, int depth);
@@ -42,12 +43,31 @@ public:
     virtual ~AlphaBetaEngine() {}
 };
 
+constexpr int NearLeaf = 3;
+
 // 本命
 class NegaScoutEngine : public AlphaBetaEngine {
-    std::unordered_map<PositionKey, SearchedPosition<double>, PositionKey::PositionHash> transpositionTable;
-    double negaScout(Bitboard p, Bitboard o, double alpha, double beta, bool passed, int depth);
+    // solverから直接置換表にアクセスしたい！
+    friend class Solver;
+
+    int prevSearchDepth;
+    std::unordered_map<PositionKey, SearchedPosition<double>, PositionKey::PositionHash> tt1, tt2;
+    std::unordered_map<PositionKey, SearchedPosition<double>, PositionKey::PositionHash> *current, *prev;
+
+    // 単純AlphaBetaだが、置換表に探索結果を書き込む
+    double negaAlpha_iddfs(Bitboard p, Bitboard o, double alpha, double beta, int depth, bool passed);
+    // 前回探索の結果による並べ替え＋negaScout
+    double negaScout_iddfs(Bitboard p, Bitboard o, double alpha, double beta, int depth, bool passed);
+
+    // 置換表による並べかえ
+    double negaScout_tt(Bitboard p, Bitboard o, double alpha, double beta, int depth, bool passed);
+    // 評価関数による並べ替え
+    double negaScout_eval(Bitboard p, Bitboard o, double alpha, double beta, int depth, bool passed);
 
 public:
+    // prevSearchDepthの設定、currentのクリア、depth以下のあいだ、だんだん深さを増やしつつ探索して、最後の探索結果をprevに格納s
+    void iterativeDeepening(Bitboard p, Bitboard o, int depth);
+
     std::vector<MoveWithScore> evalAllMoves(Bitboard p, Bitboard o, int depth);
     // 返り値は石を置くマス番号。(bitboard.h参照、0<=sq<=63)
     int chooseMove(Bitboard p, Bitboard o, int depth);
