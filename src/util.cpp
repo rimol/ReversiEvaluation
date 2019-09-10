@@ -13,8 +13,8 @@ std::string getFilenameNoExtension(const std::string &filepath) {
 }
 
 #ifdef _WIN32
-#include <windows.h>
 #include <direct.h>
+#include <windows.h>
 bool makeFolder(std::string folderPath) {
     return _mkdir(folderPath.c_str()) == 0;
 }
@@ -53,13 +53,14 @@ void enumerateFilesIn(std::string folderPath, std::vector<std::string> &out) {
 #ifdef _WIN32
     WIN32_FIND_DATA win32fd;
     HANDLE hFind = FindFirstFile((folderPath + "*.*").c_str(), &win32fd);
-    if (hFind == INVALID_HANDLE_VALUE) return;
+    if (hFind == INVALID_HANDLE_VALUE)
+        return;
     do {
         if (win32fd.dwFileAttributes & ~FILE_ATTRIBUTE_DIRECTORY) {
-            std::string filename = (const char*)win32fd.cFileName;
+            std::string filename = (const char *)win32fd.cFileName;
             out.push_back(folderPath + filename);
         }
-	} while (FindNextFile(hFind, &win32fd));
+    } while (FindNextFile(hFind, &win32fd));
     FindClose(hFind);
 #elif __APPLE__
     auto dir = opendir(folderPath.c_str());
@@ -76,4 +77,14 @@ void enumerateFilesIn(std::string folderPath, std::vector<std::string> &out) {
 
     closedir(dir);
 #endif
+}
+
+StopWatch::StopWatch() : start(std::chrono::system_clock::now()) {}
+
+void StopWatch::setTimePoint() {
+    timePoints.push_back(std::chrono::system_clock::now());
+}
+
+long long StopWatch::getElapsedTime_millisec(int i) {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(timePoints[i] - start).count();
 }

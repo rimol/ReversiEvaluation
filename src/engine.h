@@ -30,6 +30,7 @@ public:
 // これをNegaScoutの親にするとよさそう.
 class AlphaBetaEngine : public ReversiEngine {
 protected:
+    long long nodeCount;
     int currentSearchDepth;
     const Evaluator &evaluator;
     double negaAlpha(Bitboard p, Bitboard o, double alpha, double beta, int depth, bool passed);
@@ -43,7 +44,7 @@ public:
     virtual ~AlphaBetaEngine() {}
 };
 
-constexpr int NearLeaf = 3;
+constexpr int NearLeaf = 1;
 
 // 本命
 class NegaScoutEngine : public AlphaBetaEngine {

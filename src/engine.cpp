@@ -1,8 +1,10 @@
 #include "engine.h"
 #include "eval.h"
 #include "search.h"
+#include "util.h"
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 
 RandomEngine::RandomEngine() : mt(std::random_device()()) {}
 
@@ -21,12 +23,14 @@ int RandomEngine::chooseMove(Bitboard p, Bitboard o, int depth) {
 AlphaBetaEngine::AlphaBetaEngine(const Evaluator &evaluator) : evaluator(evaluator) {}
 
 double AlphaBetaEngine::negaAlpha(Bitboard p, Bitboard o, double alpha, double beta, int depth, bool passed) {
+    ++nodeCount;
+
     if (depth == currentSearchDepth)
         return evaluator.evaluate(p, o);
 
     Bitboard moves = getMoves(p, o);
     if (moves == 0ULL)
-        return passed ? (popcount(p) - popcount(o)) : -negaAlpha(o, p, -beta, -alpha, depth, true);
+        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negaAlpha(o, p, -beta, -alpha, depth, true));
 
     double bestScore = -EvalInf;
 
@@ -46,6 +50,7 @@ double AlphaBetaEngine::negaAlpha(Bitboard p, Bitboard o, double alpha, double b
 }
 
 std::vector<MoveWithScore> AlphaBetaEngine::evalAllMoves(Bitboard p, Bitboard o, int depth) {
+    nodeCount = 0LL;
     currentSearchDepth = depth;
 
     std::vector<MoveWithScore> movesWithScore;
@@ -64,6 +69,7 @@ std::vector<MoveWithScore> AlphaBetaEngine::evalAllMoves(Bitboard p, Bitboard o,
 }
 
 int AlphaBetaEngine::chooseMove(Bitboard p, Bitboard o, int depth) {
+    nodeCount = 0LL;
     currentSearchDepth = depth;
 
     double bestScore = -EvalInf;
@@ -88,6 +94,8 @@ int AlphaBetaEngine::chooseMove(Bitboard p, Bitboard o, int depth) {
 NegaScoutEngine::NegaScoutEngine(const Evaluator &evaluator) : current(&tt1), prev(&tt2), AlphaBetaEngine(evaluator) {}
 
 double NegaScoutEngine::negaAlpha_iddfs(Bitboard p, Bitboard o, double alpha, double beta, int depth, bool passed) {
+    ++nodeCount;
+
     if (depth == currentSearchDepth) {
         const PositionKey key = {p, o};
         if (current->count(key)) {
@@ -101,7 +109,7 @@ double NegaScoutEngine::negaAlpha_iddfs(Bitboard p, Bitboard o, double alpha, do
 
     Bitboard moves = getMoves(p, o);
     if (moves == 0ULL)
-        return passed ? (popcount(p) - popcount(o)) : -negaAlpha_iddfs(o, p, -beta, -alpha, depth, true);
+        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negaAlpha_iddfs(o, p, -beta, -alpha, depth, true));
 
     const PositionKey key = {p, o};
     bool isSearched = current->count(key);
@@ -141,9 +149,11 @@ double NegaScoutEngine::negaScout_iddfs(Bitboard p, Bitboard o, double alpha, do
     if (depth > prevSearchDepth)
         return negaAlpha_iddfs(p, o, alpha, beta, depth, passed);
 
+    ++nodeCount;
+
     Bitboard moves = getMoves(p, o);
     if (moves == 0ULL)
-        return passed ? (popcount(p) - popcount(o)) : -negaScout_iddfs(o, p, -beta, -alpha, depth, true);
+        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negaScout_iddfs(o, p, -beta, -alpha, depth, true));
 
     const PositionKey key = {p, o};
     bool isSearched = current->count(key);
@@ -237,9 +247,11 @@ double NegaScoutEngine::negaScout_tt(Bitboard p, Bitboard o, double alpha, doubl
     if (depth + 1 > prevSearchDepth)
         return negaScout_eval(p, o, alpha, beta, depth, passed);
 
+    ++nodeCount;
+
     Bitboard moves = getMoves(p, o);
     if (moves == 0ULL)
-        return passed ? (popcount(p) - popcount(o)) : -negaScout_tt(o, p, -beta, -alpha, depth, true);
+        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negaScout_tt(o, p, -beta, -alpha, depth, true));
 
     const PositionKey key = {p, o};
     bool isSearched = current->count(key);
@@ -329,9 +341,11 @@ double NegaScoutEngine::negaScout_eval(Bitboard p, Bitboard o, double alpha, dou
     if (currentSearchDepth - depth <= NearLeaf)
         return negaAlpha(p, o, alpha, beta, depth, passed);
 
+    ++nodeCount;
+
     Bitboard moves = getMoves(p, o);
     if (moves == 0ULL)
-        return passed ? (popcount(p) - popcount(o)) : -negaScout_eval(o, p, -beta, -alpha, depth, true);
+        return passed ? (popcount(p) - popcount(o)) : (--nodeCount, -negaScout_eval(o, p, -beta, -alpha, depth, true));
 
     const PositionKey key = {p, o};
     bool isSearched = current->count(key);
@@ -410,7 +424,7 @@ double NegaScoutEngine::negaScout_eval(Bitboard p, Bitboard o, double alpha, dou
 }
 
 void NegaScoutEngine::iterativeDeepening(Bitboard p, Bitboard o, int depth) {
-    constexpr int IterationInterval = 4;
+    constexpr int IterationInterval = 1;
 
     current->clear();
     prev->clear();
@@ -430,11 +444,14 @@ void NegaScoutEngine::iterativeDeepening(Bitboard p, Bitboard o, int depth) {
 }
 
 std::vector<MoveWithScore> NegaScoutEngine::evalAllMoves(Bitboard p, Bitboard o, int depth) {
+    nodeCount = 0;
+    StopWatch stopWatch;
+
     // 並び替えをやるところまで
-    iterativeDeepening(p, o, depth - NearLeaf);
+    iterativeDeepening(p, o, depth - 1);
+    stopWatch.setTimePoint();
 
     currentSearchDepth = depth;
-
     std::vector<MoveWithScore> movesWithScore;
     Bitboard moves = getMoves(p, o);
 
@@ -443,20 +460,29 @@ std::vector<MoveWithScore> NegaScoutEngine::evalAllMoves(Bitboard p, Bitboard o,
         moves ^= sqbit;
         Bitboard flip = getFlip(p, o, sqbit);
         double score = -negaScout_tt(o ^ flip, p ^ flip ^ sqbit, -EvalInf, EvalInf, 1, false);
-        // double score_ = -negaAlpha(o ^ flip, p ^ flip ^ sqbit, -EvalInf, EvalInf, 1, false);
-        // assert(score == score_);
+        double score_ = -negaAlpha(o ^ flip, p ^ flip ^ sqbit, -EvalInf, EvalInf, 1, false);
+        assert(score == score_);
         int sq = tzcnt(sqbit);
         movesWithScore.push_back({sq, score});
     }
+
+    stopWatch.setTimePoint();
+    std::cout << "iddfs: " << stopWatch.getElapsedTime_millisec(0) << std::endl;
+    std::cout << "all: " << stopWatch.getElapsedTime_millisec(1) << std::endl;
+    std::cout << nodeCount << " Nodes" << std::endl;
 
     return movesWithScore;
 }
 
 int NegaScoutEngine::chooseMove(Bitboard p, Bitboard o, int depth) {
-    iterativeDeepening(p, o, depth - NearLeaf);
-    currentSearchDepth = depth;
+    nodeCount = 0;
+    StopWatch stopWatch;
 
-    double bestScore = -EvalInf;
+    iterativeDeepening(p, o, depth - 1);
+    stopWatch.setTimePoint();
+
+    currentSearchDepth = depth;
+    double bestScore = negaScout_tt(p, o, -EvalInf, EvalInf, 0, false);
     int sq = -1;
 
     Bitboard moves = getMoves(p, o);
@@ -464,12 +490,17 @@ int NegaScoutEngine::chooseMove(Bitboard p, Bitboard o, int depth) {
         Bitboard sqbit = moves & -moves;
         moves ^= sqbit;
         Bitboard flip = getFlip(p, o, sqbit);
-        double score = -negaScout_tt(o ^ flip, p ^ flip ^ sqbit, -EvalInf, -bestScore, 1, false);
-        if (score >= bestScore) {
-            bestScore = score;
+        double score = -negaScout_tt(o ^ flip, p ^ flip ^ sqbit, -bestScore - 1, -bestScore + 1, 1, false);
+        if (score == bestScore) {
             sq = tzcnt(sqbit);
+            break;
         }
     }
+
+    stopWatch.setTimePoint();
+    std::cout << "iddfs: " << stopWatch.getElapsedTime_millisec(0) << std::endl;
+    std::cout << "all: " << stopWatch.getElapsedTime_millisec(1) << std::endl;
+    std::cout << nodeCount << " Nodes" << std::endl;
 
     assert(sq != -1);
     return sq;
