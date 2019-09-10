@@ -2,6 +2,7 @@
 #include "bitboard.h"
 #include "reversi.h"
 #include "search.h"
+#include "util.h"
 #include <algorithm>
 #include <chrono>
 #include <cstring>
@@ -380,14 +381,16 @@ Solution Solver::solve(Bitboard p, Bitboard o) {
     clear();
     Solution solution;
 
-    auto start = std::chrono::system_clock::now();
+    StopWatch stopWatch;
     solution.bestScore = negaScout1(p, o, -64, 64, 64 - popcount(p | o), false);
-    auto end1 = std::chrono::system_clock::now();
+    stopWatch.setTimePoint();
+
     solution.nodeCount = nodeCount;
     solution.bestMoves = getBestMoves(p, o, solution.bestScore);
-    auto end2 = std::chrono::system_clock::now();
-    solution.scoreLockTime = std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start).count();
-    solution.wholeTime = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start).count();
+    stopWatch.setTimePoint();
+
+    solution.scoreLockTime = stopWatch.getElapsedTime_millisec(0);
+    solution.wholeTime = stopWatch.getElapsedTime_millisec(1);
 
     return solution;
 }
