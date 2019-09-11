@@ -93,6 +93,8 @@ int AlphaBetaEngine::chooseMove(Bitboard p, Bitboard o, int depth) {
 
 NegaScoutEngine::NegaScoutEngine(const Evaluator &evaluator) : current(&tt1), prev(&tt2), AlphaBetaEngine(evaluator) {}
 
+constexpr int ShallowDepth = 0;
+
 double NegaScoutEngine::negaAlpha_iddfs(Bitboard p, Bitboard o, double alpha, double beta, int depth, bool passed) {
     ++nodeCount;
 
@@ -126,6 +128,11 @@ double NegaScoutEngine::negaAlpha_iddfs(Bitboard p, Bitboard o, double alpha, do
         beta = std::min(beta, sp.upper);
     } else {
         sp = {EvalInf, -EvalInf, p, o};
+    }
+
+    if (depth <= ShallowDepth) {
+        alpha = -EvalInf;
+        beta = EvalInf;
     }
 
     double bestScore = -EvalInf;
@@ -193,6 +200,11 @@ double NegaScoutEngine::negaScout_iddfs(Bitboard p, Bitboard o, double alpha, do
 
     // 敵から見て評価値の小さい順にみていく
     std::sort(orderedMoves.begin(), orderedMoves.end());
+
+    if (depth <= ShallowDepth) {
+        alpha = -EvalInf;
+        beta = EvalInf;
+    }
 
     double bestScore = -negaScout_iddfs(orderedMoves[0].nextP, orderedMoves[0].nextO, -beta, -alpha, depth + 1, false);
     if (bestScore >= beta) {
@@ -447,9 +459,8 @@ std::vector<MoveWithScore> NegaScoutEngine::evalAllMoves(Bitboard p, Bitboard o,
     nodeCount = 0;
     StopWatch stopWatch;
 
-    // 並び替えをやるところまで
-    iterativeDeepening(p, o, depth - 1);
-    stopWatch.setTimePoint();
+    current->clear();
+    prev->clear();
 
     currentSearchDepth = depth;
     std::vector<MoveWithScore> movesWithScore;
@@ -459,16 +470,15 @@ std::vector<MoveWithScore> NegaScoutEngine::evalAllMoves(Bitboard p, Bitboard o,
         Bitboard sqbit = moves & -moves;
         moves ^= sqbit;
         Bitboard flip = getFlip(p, o, sqbit);
-        double score = -negaScout_tt(o ^ flip, p ^ flip ^ sqbit, -EvalInf, EvalInf, 1, false);
-        double score_ = -negaAlpha(o ^ flip, p ^ flip ^ sqbit, -EvalInf, EvalInf, 1, false);
-        assert(score == score_);
+        double score = -negaScout_eval(o ^ flip, p ^ flip ^ sqbit, -EvalInf, EvalInf, 1, false);
+        // double score_ = -negaAlpha(o ^ flip, p ^ flip ^ sqbit, -EvalInf, EvalInf, 1, false);
+        // assert(score == score_);
         int sq = tzcnt(sqbit);
         movesWithScore.push_back({sq, score});
     }
 
     stopWatch.setTimePoint();
-    std::cout << "iddfs: " << stopWatch.getElapsedTime_millisec(0) << std::endl;
-    std::cout << "all: " << stopWatch.getElapsedTime_millisec(1) << std::endl;
+    std::cout << "all: " << stopWatch.getElapsedTime_millisec(0) << std::endl;
     std::cout << nodeCount << " Nodes" << std::endl;
 
     return movesWithScore;
@@ -478,11 +488,11 @@ int NegaScoutEngine::chooseMove(Bitboard p, Bitboard o, int depth) {
     nodeCount = 0;
     StopWatch stopWatch;
 
-    iterativeDeepening(p, o, depth - 1);
-    stopWatch.setTimePoint();
+    current->clear();
+    prev->clear();
 
     currentSearchDepth = depth;
-    double bestScore = negaScout_tt(p, o, -EvalInf, EvalInf, 0, false);
+    double bestScore = negaScout_eval(p, o, -EvalInf, EvalInf, 0, false);
     int sq = -1;
 
     Bitboard moves = getMoves(p, o);
@@ -490,7 +500,7 @@ int NegaScoutEngine::chooseMove(Bitboard p, Bitboard o, int depth) {
         Bitboard sqbit = moves & -moves;
         moves ^= sqbit;
         Bitboard flip = getFlip(p, o, sqbit);
-        double score = -negaScout_tt(o ^ flip, p ^ flip ^ sqbit, -bestScore - 1, -bestScore + 1, 1, false);
+        double score = -negaScout_eval(o ^ flip, p ^ flip ^ sqbit, -bestScore - 1, -bestScore + 1, 1, false);
         if (score == bestScore) {
             sq = tzcnt(sqbit);
             break;
@@ -498,8 +508,7 @@ int NegaScoutEngine::chooseMove(Bitboard p, Bitboard o, int depth) {
     }
 
     stopWatch.setTimePoint();
-    std::cout << "iddfs: " << stopWatch.getElapsedTime_millisec(0) << std::endl;
-    std::cout << "all: " << stopWatch.getElapsedTime_millisec(1) << std::endl;
+    std::cout << "all: " << stopWatch.getElapsedTime_millisec(0) << std::endl;
     std::cout << nodeCount << " Nodes" << std::endl;
 
     assert(sq != -1);

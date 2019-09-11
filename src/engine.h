@@ -1,3 +1,5 @@
+#pragma once
+
 #include "bitboard.h"
 #include "eval.h"
 #include "search.h"
@@ -56,17 +58,21 @@ class NegaScoutEngine : public AlphaBetaEngine {
     std::unordered_map<PositionKey, SearchedPosition<double>, PositionKey::PositionHash> *current, *prev;
 
     // 単純AlphaBetaだが、置換表に探索結果を書き込む
+    // unused
     double negaAlpha_iddfs(Bitboard p, Bitboard o, double alpha, double beta, int depth, bool passed);
     // 前回探索の結果による並べ替え＋negaScout
+    // unused
     double negaScout_iddfs(Bitboard p, Bitboard o, double alpha, double beta, int depth, bool passed);
 
     // 置換表による並べかえ
+    // unused
     double negaScout_tt(Bitboard p, Bitboard o, double alpha, double beta, int depth, bool passed);
     // 評価関数による並べ替え
     double negaScout_eval(Bitboard p, Bitboard o, double alpha, double beta, int depth, bool passed);
 
 public:
     // prevSearchDepthの設定、currentのクリア、depth以下のあいだ、だんだん深さを増やしつつ探索して、最後の探索結果をprevに格納s
+    // unused
     void iterativeDeepening(Bitboard p, Bitboard o, int depth);
 
     std::vector<MoveWithScore> evalAllMoves(Bitboard p, Bitboard o, int depth);

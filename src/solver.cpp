@@ -9,7 +9,11 @@
 #include <string>
 #include <vector>
 
-Solver::Solver(const Evaluator &evaluator) : nodeCount(), evaluator(evaluator) {
+constexpr int NoOrderingDepth = 3;
+constexpr int ParityOrderingDepth = 7;
+constexpr int LightOrderingDepth = 15;
+
+Solver::Solver(const Evaluator &evaluator) : evaluator(evaluator) {
     transpositionTable2 = new SearchedPosition<int>[TTSize];
 }
 
@@ -24,7 +28,7 @@ void Solver::clear() {
 }
 
 int Solver::negaAlpha1(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed) {
-    if (depth <= 3)
+    if (depth <= NoOrderingDepth)
         return negaAlpha2(p, o, alpha, beta, depth, passed);
 
     ++nodeCount;
@@ -119,7 +123,7 @@ int Solver::negaAlpha2(Bitboard p, Bitboard o, int alpha, int beta, int depth, b
 }
 
 int Solver::negaScout2(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed) {
-    if (depth <= 7)
+    if (depth <= ParityOrderingDepth)
         return negaAlpha1(p, o, alpha, beta, depth, passed);
 
     ++nodeCount;
@@ -228,7 +232,7 @@ int Solver::negaScout2(Bitboard p, Bitboard o, int alpha, int beta, int depth, b
 }
 
 int Solver::negaScout1(Bitboard p, Bitboard o, int alpha, int beta, int depth, bool passed) {
-    if (depth <= 15)
+    if (depth <= LightOrderingDepth)
         return negaScout2(p, o, alpha, beta, depth, passed);
 
     ++nodeCount;
@@ -380,9 +384,10 @@ std::vector<int> Solver::getBestMoves(Bitboard p, Bitboard o, int bestScore) {
 Solution Solver::solve(Bitboard p, Bitboard o) {
     clear();
     Solution solution;
+    const int searchDepth = 64 - popcount(p | o);
 
     StopWatch stopWatch;
-    solution.bestScore = negaScout1(p, o, -64, 64, 64 - popcount(p | o), false);
+    solution.bestScore = negaScout1(p, o, -64, 64, searchDepth, false);
     stopWatch.setTimePoint();
 
     solution.nodeCount = nodeCount;

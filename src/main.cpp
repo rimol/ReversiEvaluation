@@ -49,7 +49,7 @@ void doReversi() {
                 sq = AlphabetToNumber[pos[0]] + (7 - (pos[1] - '1')) * 8;
             } else {
                 auto movesWithScore = engine.evalAllMoves(reversi.p, reversi.o, depth);
-                double bestScore = -100000.0;
+                double bestScore = -EvalInf;
                 for (auto &ms : movesWithScore) {
                     std::cout << convertToLegibleSQ(ms.move) << ": " << ms.score << std::endl;
                     if (ms.score > bestScore) {
