@@ -363,7 +363,7 @@ std::vector<int> Solver::getBestMoves(Bitboard p, Bitboard o, int bestScore) {
             Bitboard _o = reversi.o ^ flip;
             /* alphabetaではmin < v < maxならばvは正確な評価値であることが確定するので、以下のように探索窓を設定しても
            この手がbestScoreを導く手かどうか分かる */
-            int score = -negaScout1(_o, _p, -bestScore - 1, -bestScore + 1, depth - 1, false);
+            int score = -negaScout1(_o, _p, std::max(-bestScore - 1, -64), std::min(-bestScore + 1, 64), depth - 1, false);
             if (score == bestScore) {
                 int sq = tzcnt(sqbit);
                 bestMoves.push_back(sq);
@@ -429,6 +429,18 @@ void ffotest() {
         {"---XXXX-X-XXXO--XXOXOO--XXXOXO--XXOXXO---OXXXOO-O-OOOO------OO--", Black},
         {"---XXX----OOOX----OOOXX--OOOOXXX--OOOOXX--OXOXXX--XXOO---XXXX-O-", Black},
         {"-OOOOO----OOOO---OOOOX--XXXXXX---OXOOX--OOOXOX----OOXX----XXXX--", White},
+        {"-----X--X-XXX---XXXXOO--XOXOOXX-XOOXXX--XOOXX-----OOOX---XXXXXX-", White},
+        {"--OX-O----XXOO--OOOOOXX-OOOOOX--OOOXOXX-OOOOXX-----OOX----X-O---", Black},
+        {"----X-----XXX----OOOXOOO-OOOXOOO-OXOXOXO-OOXXOOO--OOXO----O--O--", Black},
+        {"----O-X------X-----XXXO-OXXXXXOO-XXOOXOOXXOXXXOO--OOOO-O----OO--", White},
+        {"---X-------OX--X--XOOXXXXXXOXXXXXXXOOXXXXXXOOOXX--XO---X--------", White},
+        {"----OO-----OOO---XXXXOOO--XXOOXO-XXXXXOO--OOOXOO--X-OX-O-----X--", Black},
+        {"--OOO---XXOO----XXXXOOOOXXXXOX--XXXOXX--XXOOO------OOO-----O----", Black},
+        {"--------X-X------XXXXOOOOOXOXX--OOOXXXX-OOXXXX--O-OOOX-----OO---", White},
+        {"--XXXXX---XXXX---OOOXX---OOXOX---OXXXXX-OOOOOXO----OXX----------", White},
+        {"-------------------XXOOO--XXXOOO--XXOXOO-OOOXXXO--OXOO-O-OOOOO--", Black},
+        {"--XOOO----OOO----OOOXOO--OOOOXO--OXOXXX-OOXXXX----X-XX----------", Black},
+        {"-----------------------O--OOOOO---OOOOOXOOOOXXXX--XXOOXX--XX-O-X", Black},
     };
 
     std::string weightFolderpath;
@@ -438,10 +450,15 @@ void ffotest() {
     PatternEvaluator evaluator(weightFolderpath);
     Solver solver(evaluator);
 
+    StopWatch stopWatch;
+
     for (FFO ffo : tests) {
         Solution solution = solver.solve(ffo.p, ffo.o);
+        Reversi reversi(ffo.p, ffo.o);
 
-        std::cout << "BestScore:" << solution.bestScore << std::endl
+        reversi.print();
+        std::cout << "Depth:" << (64 - reversi.stoneCount()) << std::endl
+                  << "BestScore:" << solution.bestScore << std::endl
                   << "ScoreLockTime:" << (solution.scoreLockTime / 1000.0) << " sec" << std::endl
                   << "WholeTime:" << (solution.wholeTime / 1000.0) << " sec" << std::endl
                   << "Nodes:" << solution.nodeCount << std::endl
@@ -453,4 +470,8 @@ void ffotest() {
 
         std::cout << std::endl;
     }
+
+    stopWatch.setTimePoint();
+    std::cout << "Done!" << std::endl
+              << (double)stopWatch.getElapsedTime_millisec(0) / 1000.0 << " sec elapsed." << std::endl;
 }
